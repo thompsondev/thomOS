@@ -1,0 +1,17 @@
+import { Module } from '@nestjs/common';
+import { ChatModule } from './chat/chat.module';
+import { AgentsModule } from './agents/agents.module';
+import { ProfileModule } from './profile/profile.module';
+import { JobsModule } from './jobs/jobs.module';
+import { ApplicationsModule } from './applications/applications.module';
+
+@Module({
+  imports: [
+    ChatModule,
+    AgentsModule,
+    ProfileModule,
+    JobsModule,
+    ApplicationsModule,
+  ],
+})
+export class V1Module {}
