@@ -152,6 +152,51 @@ export class AgentsController {
     return this.orchestrator.runInsightsPipeline(user.userId);
   }
 
+  @Post('pipeline/interview-prep')
+  @ApiOperation({
+    summary:
+      'Interview prep pipeline: focused prep pack for one job/interview (uses profile + job + optional email)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['jobId'],
+      properties: {
+        jobId: { type: 'string' },
+        applicationId: { type: 'string' },
+        emailId: { type: 'string' },
+        focus: { type: 'string', example: 'technical round' },
+        interviewFormat: { type: 'string', example: '45-min video with hiring manager' },
+        interviewAt: { type: 'string', format: 'date-time' },
+        interviewNotes: { type: 'string' },
+      },
+    },
+  })
+  interviewPrep(
+    @CurrentUser() user: AuthUser,
+    @Body()
+    body: {
+      jobId: string;
+      applicationId?: string;
+      emailId?: string;
+      focus?: string;
+      interviewFormat?: string;
+      interviewAt?: string;
+      interviewNotes?: string;
+    },
+  ) {
+    return this.orchestrator.runInterviewPrepPipeline(user.userId, body.jobId, {
+      applicationId: body.applicationId,
+      emailId: body.emailId,
+      input: {
+        focus: body.focus,
+        interviewFormat: body.interviewFormat,
+        interviewAt: body.interviewAt,
+        interviewNotes: body.interviewNotes,
+      },
+    });
+  }
+
   @Get(':agentId')
   @ApiOperation({ summary: 'Get one agent descriptor' })
   getAgent(@Param('agentId') agentId: AgentId) {

@@ -22,6 +22,7 @@ export enum AgentId {
   EMAIL = 'email',
   ANALYTICS = 'analytics',
   COACH = 'coach',
+  INTERVIEW_PREP = 'interview_prep',
 }
 
 export enum AgentRunStatus {

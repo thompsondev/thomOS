@@ -19,6 +19,7 @@ import { BrowserAgent } from '../browser/browser.agent';
 import { EmailAgent } from '../email/email.agent';
 import { AnalyticsAgent } from '../analytics/analytics.agent';
 import { CoachAgent } from '../coach/coach.agent';
+import { InterviewPrepAgent } from '../interview-prep/interview-prep.agent';
 import type {
   AgentContext,
   AgentDescriptor,
@@ -41,6 +42,7 @@ export class OrchestratorService {
     private readonly email: EmailAgent,
     private readonly analytics: AnalyticsAgent,
     private readonly coach: CoachAgent,
+    private readonly interviewPrep: InterviewPrepAgent,
     @InjectRepository(Profile)
     private readonly profiles: Repository<Profile>,
     @InjectRepository(Job)
@@ -60,6 +62,7 @@ export class OrchestratorService {
       email,
       analytics,
       coach,
+      interviewPrep,
     ];
     this.agents = new Map(list.map((a) => [a.id, a]));
   }
@@ -192,6 +195,35 @@ export class OrchestratorService {
     steps.push(coach);
 
     return { pipeline: 'insights', steps };
+  }
+
+  /** Focused prep pack for one upcoming interview */
+  async runInterviewPrepPipeline(
+    userId: string,
+    jobId: string,
+    options?: {
+      applicationId?: string;
+      emailId?: string;
+      input?: Record<string, unknown>;
+    },
+  ): Promise<PipelineResult> {
+    const steps: AgentResult[] = [];
+    const prep = await this.runAgent(AgentId.INTERVIEW_PREP, userId, {
+      jobId,
+      applicationId: options?.applicationId,
+      input: {
+        ...options?.input,
+        emailId: options?.emailId,
+      },
+    });
+    steps.push(prep);
+
+    return {
+      pipeline: 'interview_prep',
+      steps,
+      applicationId: options?.applicationId,
+      jobIds: [jobId],
+    };
   }
 
   private async buildContext(

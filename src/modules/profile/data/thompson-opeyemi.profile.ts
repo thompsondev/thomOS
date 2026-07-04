@@ -91,6 +91,8 @@ export const thompsonOpeyemiProfile: UpsertProfileDto = {
   userId: THOMPSON_USER_ID,
   fullName: 'Thompson Opeyemi Odunayo',
   headline: 'Senior Frontend Engineer | AI & Automation Engineer',
+  phone: '+234 805 198 6863',
+  linkedinUrl: null,
   summary:
     'Software engineer with 6+ years of experience building scalable fintech and SaaS platforms using React.js/Next.js/Vue.js, NestJS, TypeORM, PostgreSQL, and AI tools. Develops responsive, high-performance interfaces and robust backend services, designs efficient APIs, and delivers features that scale reliably.',
   masterResume: MASTER_RESUME,

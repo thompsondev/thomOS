@@ -37,6 +37,11 @@ export class ProfileController {
         fullName: { type: 'string' },
         headline: { type: 'string' },
         summary: { type: 'string' },
+        phone: { type: 'string', example: '+234 805 198 6863' },
+        linkedinUrl: {
+          type: 'string',
+          example: 'https://linkedin.com/in/your-handle',
+        },
         masterResume: { type: 'string' },
         skills: { type: 'array', items: { type: 'string' } },
         filters: { type: 'object' },

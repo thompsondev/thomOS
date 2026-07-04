@@ -51,6 +51,8 @@ export class ProfileService implements OnModuleInit {
         fullName: dto.fullName ?? null,
         headline: dto.headline ?? null,
         summary: dto.summary ?? null,
+        phone: dto.phone ?? null,
+        linkedinUrl: dto.linkedinUrl ?? null,
         masterResume: dto.masterResume ?? '',
         skills: dto.skills ?? [],
         filters: dto.filters ?? {},
@@ -60,6 +62,8 @@ export class ProfileService implements OnModuleInit {
       if (dto.fullName !== undefined) profile.fullName = dto.fullName;
       if (dto.headline !== undefined) profile.headline = dto.headline;
       if (dto.summary !== undefined) profile.summary = dto.summary;
+      if (dto.phone !== undefined) profile.phone = dto.phone;
+      if (dto.linkedinUrl !== undefined) profile.linkedinUrl = dto.linkedinUrl;
       if (dto.masterResume !== undefined)
         profile.masterResume = dto.masterResume;
       if (dto.skills !== undefined) profile.skills = dto.skills;

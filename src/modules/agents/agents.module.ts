@@ -4,6 +4,7 @@ import {
   AgentRun,
   Application,
   Document,
+  EmailMessage,
   Job,
   Profile,
 } from '../../lib/database/entities';
@@ -18,10 +19,18 @@ import { BrowserAgent } from './browser/browser.agent';
 import { EmailAgent } from './email/email.agent';
 import { AnalyticsAgent } from './analytics/analytics.agent';
 import { CoachAgent } from './coach/coach.agent';
+import { InterviewPrepAgent } from './interview-prep/interview-prep.agent';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Profile, Job, Application, Document, AgentRun]),
+    TypeOrmModule.forFeature([
+      Profile,
+      Job,
+      Application,
+      Document,
+      AgentRun,
+      EmailMessage,
+    ]),
   ],
   controllers: [AgentsController],
   providers: [
@@ -35,6 +44,7 @@ import { CoachAgent } from './coach/coach.agent';
     EmailAgent,
     AnalyticsAgent,
     CoachAgent,
+    InterviewPrepAgent,
   ],
   exports: [OrchestratorService],
 })

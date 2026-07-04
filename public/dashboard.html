@@ -509,6 +509,69 @@
         font-size: 0.82rem;
         color: var(--text-2);
       }
+
+      .prep-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 120;
+        background: rgba(8, 10, 18, 0.72);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .prep-modal {
+        width: min(720px, 100%);
+        max-height: min(85vh, 900px);
+        overflow: auto;
+        background: var(--surface);
+        border: 1px solid var(--border-hi);
+        border-radius: 16px;
+        padding: 22px 24px;
+      }
+
+      .prep-modal h3 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+      }
+
+      .prep-modal .prep-section {
+        margin-top: 16px;
+      }
+
+      .prep-modal .prep-section h4 {
+        margin: 0 0 8px;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--text-3);
+      }
+
+      .prep-modal ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--text-2);
+        font-size: 0.88rem;
+        line-height: 1.5;
+      }
+
+      .prep-modal .qa {
+        border-left: 2px solid var(--violet);
+        padding-left: 12px;
+        margin-bottom: 12px;
+      }
+
+      .prep-modal .qa strong {
+        display: block;
+        color: var(--text-1);
+        margin-bottom: 4px;
+      }
+
+      .board-note {
+        color: var(--amber);
+        font-size: 0.78rem;
+      }
     </style>
   </head>
   <body>
@@ -782,6 +845,17 @@
         }
       }
 
+      function isUnsupportedApplyBoard(job) {
+        const s = (job?.source || '').toLowerCase();
+        const u = (job?.sourceUrl || '').toLowerCase();
+        return (
+          s === 'linkedin' ||
+          s === 'indeed' ||
+          u.includes('linkedin.com') ||
+          u.includes('indeed.com')
+        );
+      }
+
       function jobRow(job) {
         const score =
           job.matchScore != null
@@ -791,6 +865,10 @@
           ? `<a class="link" href="${escapeAttr(job.sourceUrl)}" target="_blank" rel="noopener">Open listing</a>`
           : '';
         const hasUrl = !!job.sourceUrl;
+        const blocked = isUnsupportedApplyBoard(job);
+        const boardNote = blocked
+          ? `<span class="board-note">LinkedIn/Indeed — use Email CV or company ATS page</span>`
+          : '';
         return `<div class="row" data-job-id="${escapeAttr(job.id)}">
           <div class="title">${escapeHtml(job.title)}</div>
           <div class="meta">
@@ -799,16 +877,18 @@
             <span>${escapeHtml(job.source || 'manual')}</span>
             ${score}
             ${link}
+            ${boardNote}
           </div>
           <div class="row-actions">
             <button class="btn btn-teal btn-xs" data-action="docs" data-job-id="${escapeAttr(job.id)}" type="button">Generate docs</button>
             <button class="btn btn-ghost btn-xs" data-action="apply" data-job-id="${escapeAttr(job.id)}" type="button">Apply prep</button>
             ${
-              hasUrl
+              hasUrl && !blocked
                 ? `<button class="btn btn-ghost btn-xs" data-action="fill" data-job-id="${escapeAttr(job.id)}" type="button">Fill form</button>`
                 : ''
             }
             <button class="btn btn-ghost btn-xs" data-action="email-apply" data-job-id="${escapeAttr(job.id)}" type="button">Email CV</button>
+            <button class="btn btn-ghost btn-xs" data-action="prep" data-job-id="${escapeAttr(job.id)}" type="button">Interview prep</button>
           </div>
         </div>`;
       }
@@ -825,8 +905,12 @@
         const approveBtn = app.autoSubmitApproved
           ? ''
           : `<button class="btn btn-teal btn-xs" data-action="approve" data-app-id="${escapeAttr(app.id)}" type="button">Approve submit</button>`;
-        const fillBtn = job?.sourceUrl
-          ? `<button class="btn btn-ghost btn-xs" data-action="fill" data-job-id="${escapeAttr(app.jobId)}" data-app-id="${escapeAttr(app.id)}" type="button">Fill form</button>`
+        const fillBtn =
+          job?.sourceUrl && !isUnsupportedApplyBoard(job)
+            ? `<button class="btn btn-ghost btn-xs" data-action="fill" data-job-id="${escapeAttr(app.jobId)}" data-app-id="${escapeAttr(app.id)}" type="button">Fill form</button>`
+            : '';
+        const prepBtn = job
+          ? `<button class="btn btn-teal btn-xs" data-action="prep" data-job-id="${escapeAttr(app.jobId)}" data-app-id="${escapeAttr(app.id)}" type="button">Interview prep</button>`
           : '';
         return `<div class="row" data-app-id="${escapeAttr(app.id)}">
           <div class="title">${escapeHtml(title)}</div>
@@ -838,6 +922,7 @@
           <div class="row-actions">
             ${approveBtn}
             ${fillBtn}
+            ${prepBtn}
             <button class="btn btn-ghost btn-xs" data-action="status" data-app-id="${escapeAttr(app.id)}" data-status="waiting" type="button">Mark waiting</button>
             <button class="btn btn-ghost btn-xs" data-action="status" data-app-id="${escapeAttr(app.id)}" data-status="applied" type="button">Mark applied</button>
           </div>
@@ -915,6 +1000,11 @@
                 : ''
             }
             ${
+              email.jobId
+                ? `<button class="btn btn-teal btn-xs" data-action="prep" data-job-id="${escapeAttr(email.jobId)}" data-email-id="${escapeAttr(email.id)}" type="button">Interview prep</button>`
+                : ''
+            }
+            ${
               scheduled
                 ? `<a class="link" href="${escapeAttr(scheduled)}" target="_blank" rel="noopener">Open in Google</a>`
                 : ''
@@ -979,8 +1069,80 @@
           : '<div class="empty">No emails classified yet.</div>';
 
         $('user-line').textContent = me.email;
-        $('profile-chip').textContent =
-          profile.headline || profile.fullName || 'Profile loaded';
+        const contact = [profile.phone, profile.linkedinUrl]
+          .filter(Boolean)
+          .join(' · ');
+        $('profile-chip').textContent = contact
+          ? `${profile.headline || profile.fullName || 'Profile'} — ${contact}`
+          : profile.headline || profile.fullName || 'Profile loaded';
+      }
+
+      function closePrepModal() {
+        const el = document.getElementById('prep-overlay');
+        if (el) el.remove();
+      }
+
+      function showPrepModal(title, data) {
+        closePrepModal();
+        const questions = (data.likelyQuestions || [])
+          .map(
+            (q) => `<div class="qa">
+              <strong>${escapeHtml(q.question)}</strong>
+              <div>${escapeHtml(q.suggestedAnswer)}</div>
+              ${q.tips ? `<div style="margin-top:4px;color:var(--text-3)">${escapeHtml(q.tips)}</div>` : ''}
+            </div>`,
+          )
+          .join('');
+        const list = (items) =>
+          items?.length
+            ? `<ul>${items.map((i) => `<li>${escapeHtml(i)}</li>`).join('')}</ul>`
+            : '<div class="empty">—</div>';
+
+        const overlay = document.createElement('div');
+        overlay.id = 'prep-overlay';
+        overlay.className = 'prep-overlay';
+        overlay.innerHTML = `<div class="prep-modal" role="dialog" aria-modal="true">
+          <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start">
+            <h3>${escapeHtml(title)}</h3>
+            <button class="btn btn-ghost btn-xs" type="button" id="prep-close">Close</button>
+          </div>
+          <p style="margin:0;color:var(--text-2);font-size:0.9rem;line-height:1.5">${escapeHtml(data.overview || '')}</p>
+          ${data.interviewFormat ? `<p style="margin:8px 0 0;color:var(--violet);font-size:0.82rem">Format: ${escapeHtml(data.interviewFormat)}</p>` : ''}
+          <div class="prep-section"><h4>Likely questions</h4>${questions || '<div class="empty">—</div>'}</div>
+          <div class="prep-section"><h4>Technical topics</h4>${list(data.technicalTopics)}</div>
+          <div class="prep-section"><h4>Questions to ask them</h4>${list(data.questionsToAskThem)}</div>
+          <div class="prep-section"><h4>Day-of checklist</h4>${list(data.dayOfChecklist)}</div>
+          <div class="prep-section"><h4>Weak spots to prep</h4>${list(data.weakSpots)}</div>
+        </div>`;
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) closePrepModal();
+        });
+        document.body.appendChild(overlay);
+        document.getElementById('prep-close').addEventListener('click', closePrepModal);
+      }
+
+      async function interviewPrep(jobId, applicationId, emailId) {
+        await runAction('Building interview prep pack…', async () => {
+          const body = { jobId };
+          if (applicationId) body.applicationId = applicationId;
+          if (emailId) body.emailId = emailId;
+          const result = await api('/agents/pipeline/interview-prep', {
+            method: 'POST',
+            body: JSON.stringify(body),
+          });
+          const step = (result.steps || []).find(
+            (s) => s.agentId === 'interview_prep',
+          );
+          if (!step?.success) {
+            throw new Error(step?.error || step?.summary || 'Interview prep failed');
+          }
+          const job = cache.jobs.find((j) => j.id === jobId);
+          const title = job
+            ? `Interview prep — ${job.title} · ${job.company}`
+            : 'Interview prep';
+          showPrepModal(title, step.data || {});
+          toast('Interview prep pack ready');
+        });
       }
 
       async function ingestEmail() {
@@ -1255,6 +1417,8 @@
         if (action === 'docs' && jobId) generateDocs(jobId);
         if (action === 'apply' && jobId) applyPrep(jobId);
         if (action === 'fill' && jobId) fillForm(jobId, appId);
+        if (action === 'prep' && jobId)
+          interviewPrep(jobId, appId, btn.dataset.emailId);
         if (action === 'email-apply' && jobId) emailApply(jobId);
         if (action === 'approve' && appId) approveSubmit(appId);
         if (action === 'status' && appId && status) setStatus(appId, status);

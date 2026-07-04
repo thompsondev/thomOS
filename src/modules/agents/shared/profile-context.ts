@@ -31,6 +31,8 @@ export function buildExperienceSourceBlock(profile: Profile): string {
   return `CANDIDATE IDENTITY (use exactly; do not invent):
 - Full name: ${profile.fullName ?? 'not provided'}
 - Headline: ${profile.headline ?? 'not provided'}
+- Phone: ${profile.phone?.trim() || 'not provided'}
+- LinkedIn: ${profile.linkedinUrl?.trim() || 'not provided'}
 - Skills on file: ${(profile.skills ?? []).join(', ') || 'none listed'}
 
 MASTER RESUME (source of truth — only use facts present here):
