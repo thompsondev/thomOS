@@ -17,6 +17,7 @@ export enum AgentId {
   MATCHING = 'matching',
   RESUME = 'resume',
   COVER_LETTER = 'cover_letter',
+  CV_REVIEW = 'cv_review',
   APPLICATION = 'application',
   BROWSER = 'browser',
   EMAIL = 'email',

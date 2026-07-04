@@ -77,7 +77,7 @@ export class AgentsController {
   @Post('pipeline/documents')
   @ApiOperation({
     summary:
-      'Documents pipeline: tailored CV + cover letter from your master experience only',
+      'Documents pipeline: tailored CV → CV review → cover letter from your master experience',
   })
   @ApiBody({
     schema: {
@@ -166,7 +166,10 @@ export class AgentsController {
         applicationId: { type: 'string' },
         emailId: { type: 'string' },
         focus: { type: 'string', example: 'technical round' },
-        interviewFormat: { type: 'string', example: '45-min video with hiring manager' },
+        interviewFormat: {
+          type: 'string',
+          example: '45-min video with hiring manager',
+        },
         interviewAt: { type: 'string', format: 'date-time' },
         interviewNotes: { type: 'string' },
       },

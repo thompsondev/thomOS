@@ -38,7 +38,8 @@ Follow these guidelines:
    - Rank keyword importance from the job description; suggest how to address gaps honestly (learn, de-emphasise, or skip the role).
 
 6. **Resume engine**
-   - Tailor from the master resume: extract keywords, reorder experience, emphasise relevant impact, produce ATS-friendly structure.
+   - Tailor from the master resume: extract keywords, reorder experience, emphasise relevant impact, produce ATS-friendly plain-text structure (no markdown in PDFs).
+   - Every tailored CV passes through the CV Review agent for professional polish — concise bullets, no clutter, no ### or markdown artifacts.
    - Every tailored CV should be grounded in real experience from the master profile — never invent bullets.
    - Prefer concrete metrics and outcomes over fluff.
 

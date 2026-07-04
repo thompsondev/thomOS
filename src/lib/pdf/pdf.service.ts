@@ -2,6 +2,13 @@ import { Injectable, Logger } from '@nestjs/common';
 import { mkdir, writeFile } from 'fs/promises';
 import { dirname, join } from 'path';
 import PDFDocument from 'pdfkit';
+import {
+  isBulletLine,
+  isSectionHeader,
+  normalizeCvContent,
+  stripMarkdownSyntax,
+  toBulletText,
+} from './cv-plain-text';
 
 @Injectable()
 export class PdfService {
@@ -39,34 +46,66 @@ export class PdfService {
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      doc.fontSize(16).font('Helvetica-Bold').text(title, { align: 'left' });
-      doc.moveDown(0.75);
+      const normalized = normalizeCvContent(content);
+      const lines = normalized.split(/\r?\n/);
+      let lineIndex = 0;
+
+      while (lineIndex < lines.length && !lines[lineIndex].trim()) lineIndex++;
+      if (lineIndex < lines.length) {
+        const first = stripMarkdownSyntax(lines[lineIndex]);
+        if (
+          first.length <= 60 &&
+          !isSectionHeader(first) &&
+          !isBulletLine(first)
+        ) {
+          doc
+            .fontSize(18)
+            .font('Helvetica-Bold')
+            .text(first, { align: 'left' });
+          doc.moveDown(0.35);
+          lineIndex++;
+        }
+      }
+
       doc.fontSize(10).font('Helvetica');
 
-      for (const line of content.split(/\r?\n/)) {
-        const trimmed = line.trimEnd();
+      for (; lineIndex < lines.length; lineIndex++) {
+        const raw = lines[lineIndex];
+        const trimmed = raw.trim();
+
         if (!trimmed) {
-          doc.moveDown(0.4);
+          doc.moveDown(0.35);
           continue;
         }
-        if (trimmed.startsWith('# ')) {
-          doc.moveDown(0.3);
-          doc.fontSize(14).font('Helvetica-Bold').text(trimmed.slice(2));
+
+        const line = stripMarkdownSyntax(raw);
+
+        if (isSectionHeader(line)) {
+          doc.moveDown(0.45);
+          doc.fontSize(11).font('Helvetica-Bold').text(line, {
+            characterSpacing: 0.6,
+          });
+          doc.moveDown(0.15);
           doc.fontSize(10).font('Helvetica');
           continue;
         }
-        if (trimmed.startsWith('## ')) {
-          doc.moveDown(0.25);
-          doc.fontSize(12).font('Helvetica-Bold').text(trimmed.slice(3));
-          doc.fontSize(10).font('Helvetica');
+
+        if (isBulletLine(line)) {
+          doc.text(`• ${toBulletText(line)}`, {
+            indent: 14,
+            paragraphGap: 2,
+          });
           continue;
         }
-        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-          doc.text(`• ${trimmed.slice(2)}`, { indent: 12 });
+
+        if (line.includes('|') || /\b(20\d{2}|Present)\b/.test(line)) {
+          doc.moveDown(0.15);
+          doc.font('Helvetica-Bold').text(line);
+          doc.font('Helvetica');
           continue;
         }
-        const boldStripped = trimmed.replace(/\*\*(.*?)\*\*/g, '$1');
-        doc.text(boldStripped, { align: 'left' });
+
+        doc.text(line, { align: 'left', paragraphGap: 2 });
       }
 
       doc.end();

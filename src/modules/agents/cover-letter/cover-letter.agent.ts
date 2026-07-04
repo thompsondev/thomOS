@@ -8,6 +8,7 @@ import {
 } from '../../../lib/database/entities';
 import { AiService } from '../../../lib/ai/ai.service';
 import { PdfService } from '../../../lib/pdf/pdf.service';
+import { normalizeCvContent } from '../../../lib/pdf/cv-plain-text';
 import { BaseAgent } from '../base/base.agent';
 import type { AgentContext, AgentResult } from '../agents.types';
 import {
@@ -50,7 +51,7 @@ Return ONLY valid JSON:
   "experienceReferenced": string[],
   "omittedGaps": string[]
 }
-content must be markdown or plain prose. experienceReferenced = profile facts you used. omittedGaps = JD asks you could not support.`;
+content must be plain prose (no markdown: no #, **, or backticks). experienceReferenced = profile facts you used. omittedGaps = JD asks you could not support.`;
 
   constructor(
     ai: AiService,
@@ -93,6 +94,8 @@ ${ctx.job.description}`;
         return this.fail('Cover letter agent returned invalid JSON');
       }
 
+      const content = normalizeCvContent(parsed.content);
+
       let doc = await this.documents.save(
         this.documents.create({
           userId: ctx.userId,
@@ -102,7 +105,7 @@ ${ctx.job.description}`;
           title:
             parsed.title ||
             `Cover letter — ${ctx.job.title} @ ${ctx.job.company}`,
-          content: parsed.content,
+          content,
           metadata: {
             tailoredToJobId: ctx.job.id,
             experienceReferenced: parsed.experienceReferenced ?? [],

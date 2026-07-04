@@ -8,6 +8,7 @@ import {
 } from '../../../lib/database/entities';
 import { AiService } from '../../../lib/ai/ai.service';
 import { PdfService } from '../../../lib/pdf/pdf.service';
+import { normalizeCvContent } from '../../../lib/pdf/cv-plain-text';
 import { BaseAgent } from '../base/base.agent';
 import type { AgentContext, AgentResult } from '../agents.types';
 import {
@@ -30,6 +31,15 @@ export class ResumeAgent extends BaseAgent {
 
 Your job: produce a tailored ATS resume for ONE job, grounded ONLY in the candidate's provided experience.
 
+FORMAT — plain text only (NO markdown):
+- Do NOT use #, ##, ###, **, backticks, or [links](url).
+- Section headers in ALL CAPS on their own line: PROFESSIONAL SUMMARY, EXPERIENCE, SKILLS, EDUCATION.
+- Line 1: candidate full name.
+- Line 2: City | Phone | Email | LinkedIn | GitHub (only fields available in profile).
+- Role header line: Job Title | Company | Location | Start – End
+- Bullets: start each with "• " then one concise achievement line (max 4 bullets per role).
+- Skills: comma-separated on one or two lines.
+
 You MUST:
 - Use only facts from MASTER RESUME / STRUCTURED EXPERIENCE / SKILLS in the user message.
 - Reorder roles and bullets so the most relevant experience for this job comes first.
@@ -39,7 +49,7 @@ You MUST:
 You MUST NOT:
 - Invent employers, titles, dates, degrees, certifications, or tools.
 - Claim skills that are not in the profile.
-- Pad the resume with generic filler unrelated to the candidate.
+- Pad the resume with generic filler or buzzword clusters.
 
 If the profile is thin for this role, write a shorter honest resume rather than fabricating fit.
 
@@ -51,7 +61,7 @@ Return ONLY valid JSON:
   "experienceHighlighted": string[],
   "omittedGaps": string[]
 }
-content must be markdown. experienceHighlighted = role/company lines you emphasised. omittedGaps = JD requirements you could not support from the profile.`;
+content must be plain-text professional CV (no markdown). experienceHighlighted = role/company lines you emphasised. omittedGaps = JD requirements you could not support from the profile.`;
 
   constructor(
     ai: AiService,
@@ -74,6 +84,17 @@ content must be markdown. experienceHighlighted = role/company lines you emphasi
 
 ${buildExperienceSourceBlock(profile)}
 
+CONTACT TO USE ON CV (line 2 under name):
+${[
+  profile.filters?.locations?.[0],
+  profile.phone,
+  ctx.userId,
+  profile.linkedinUrl,
+  profile.githubUrl,
+]
+  .filter(Boolean)
+  .join(' | ')}
+
 TARGET JOB:
 - Title: ${ctx.job.title}
 - Company: ${ctx.job.company}
@@ -95,6 +116,8 @@ ${ctx.job.description}`;
         return this.fail('Resume agent returned invalid JSON');
       }
 
+      const content = normalizeCvContent(parsed.content);
+
       let doc = await this.documents.save(
         this.documents.create({
           userId: ctx.userId,
@@ -103,7 +126,7 @@ ${ctx.job.description}`;
           type: DocumentType.RESUME,
           title:
             parsed.title || `Resume — ${ctx.job.title} @ ${ctx.job.company}`,
-          content: parsed.content,
+          content,
           metadata: {
             tailoredToJobId: ctx.job.id,
             keywordsUsed: parsed.keywordsUsed ?? [],

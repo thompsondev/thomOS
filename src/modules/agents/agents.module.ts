@@ -14,6 +14,7 @@ import { DiscoveryAgent } from './discovery/discovery.agent';
 import { MatchingAgent } from './matching/matching.agent';
 import { ResumeAgent } from './resume/resume.agent';
 import { CoverLetterAgent } from './cover-letter/cover-letter.agent';
+import { CvReviewAgent } from './cv-review/cv-review.agent';
 import { ApplicationAgent } from './application/application.agent';
 import { BrowserAgent } from './browser/browser.agent';
 import { EmailAgent } from './email/email.agent';
@@ -39,6 +40,7 @@ import { InterviewPrepAgent } from './interview-prep/interview-prep.agent';
     MatchingAgent,
     ResumeAgent,
     CoverLetterAgent,
+    CvReviewAgent,
     ApplicationAgent,
     BrowserAgent,
     EmailAgent,

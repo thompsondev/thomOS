@@ -14,6 +14,7 @@ import { DiscoveryAgent } from '../discovery/discovery.agent';
 import { MatchingAgent } from '../matching/matching.agent';
 import { ResumeAgent } from '../resume/resume.agent';
 import { CoverLetterAgent } from '../cover-letter/cover-letter.agent';
+import { CvReviewAgent } from '../cv-review/cv-review.agent';
 import { ApplicationAgent } from '../application/application.agent';
 import { BrowserAgent } from '../browser/browser.agent';
 import { EmailAgent } from '../email/email.agent';
@@ -37,6 +38,7 @@ export class OrchestratorService {
     private readonly matching: MatchingAgent,
     private readonly resume: ResumeAgent,
     private readonly coverLetter: CoverLetterAgent,
+    private readonly cvReview: CvReviewAgent,
     private readonly application: ApplicationAgent,
     private readonly browser: BrowserAgent,
     private readonly email: EmailAgent,
@@ -57,6 +59,7 @@ export class OrchestratorService {
       matching,
       resume,
       coverLetter,
+      cvReview,
       application,
       browser,
       email,
@@ -112,7 +115,7 @@ export class OrchestratorService {
   }
 
   /**
-   * Documents only: tailored CV + cover letter from master profile experience.
+   * Documents only: tailored CV → CV review → cover letter from master profile.
    */
   async runDocumentsPipeline(
     userId: string,
@@ -122,6 +125,14 @@ export class OrchestratorService {
 
     const resume = await this.runAgent(AgentId.RESUME, userId, { jobId });
     steps.push(resume);
+
+    const documentId = (resume.data as { documentId?: string } | undefined)
+      ?.documentId;
+    const review = await this.runAgent(AgentId.CV_REVIEW, userId, {
+      jobId,
+      input: { documentId },
+    });
+    steps.push(review);
 
     const cover = await this.runAgent(AgentId.COVER_LETTER, userId, { jobId });
     steps.push(cover);
@@ -155,6 +166,15 @@ export class OrchestratorService {
       input,
     });
     steps.push(resume);
+
+    const resumeDocId = (resume.data as { documentId?: string } | undefined)
+      ?.documentId;
+    const cvReview = await this.runAgent(AgentId.CV_REVIEW, userId, {
+      jobId,
+      applicationId,
+      input: { documentId: resumeDocId },
+    });
+    steps.push(cvReview);
 
     const cover = await this.runAgent(AgentId.COVER_LETTER, userId, {
       jobId,
