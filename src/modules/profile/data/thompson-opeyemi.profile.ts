@@ -1,7 +1,7 @@
 import type { UpsertProfileDto } from '../profile.types';
 
-/** Default owner id for Thompson's master profile */
-export const THOMPSON_USER_ID = 'Topeyemi33@gmail.com';
+/** Default owner id for Thompson's master profile (always lowercase) */
+export const THOMPSON_USER_ID = 'topeyemi33@gmail.com';
 
 const MASTER_RESUME = `THOMPSON OPEYEMI ODUNAYO
 Lagos, Nigeria | +234 805 198 6863

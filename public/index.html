@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AIOS – Stream</title>
+    <title>thomOS – Chat</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1371,7 +1371,7 @@
           </svg>
         </div>
         <div class="brand-name">
-          <span class="brand-name-main">HEY<em>SCRAPPER</em></span>
+          <span class="brand-name-main">thom<em>OS</em></span>
           <span
             class="brand-name-sub"
             id="brand-author"
@@ -1380,6 +1380,18 @@
         </div>
       </div>
       <div class="header-right">
+        <a
+          href="/dashboard.html"
+          style="
+            color: var(--text-2);
+            text-decoration: none;
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+          "
+          >Dashboard</a
+        >
         <div id="status" class="status">
           <span class="status-dot"></span>
           <span id="status-text">READY</span>
@@ -2194,9 +2206,17 @@
             history: conversationHistory.slice(-HISTORY_LIMIT),
           };
           if (apiAttachments.length) reqBody.attachments = apiAttachments;
+          const authToken = localStorage.getItem('thomos_token');
+          if (!authToken) {
+            window.location.href = '/dashboard.html';
+            return;
+          }
           const res = await fetch(apiUrl, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: 'Bearer ' + authToken,
+            },
             body: JSON.stringify(reqBody),
           });
 
@@ -2204,6 +2224,11 @@
             let errMsg;
             try {
               const body = await res.json();
+              if (res.status === 401) {
+                localStorage.removeItem('thomos_token');
+                window.location.href = '/dashboard.html';
+                return;
+              }
               if (res.status === 413) {
                 errMsg =
                   'Message too large. Please shorten your input and try again.';

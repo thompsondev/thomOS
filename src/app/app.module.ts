@@ -6,7 +6,7 @@ import { AppService } from './app.service';
 import { LibModule } from '../lib/lib.module';
 import { CustomLoggerService } from '../lib/loggger/logger.service';
 import { V1Module } from '../modules/v1.module';
-import { ApiKeyGuard } from '../middleware';
+import { ApiKeyGuard, JwtAuthGuard } from '../middleware';
 
 @Module({
   imports: [
@@ -20,6 +20,7 @@ import { ApiKeyGuard } from '../middleware';
   providers: [
     AppService,
     CustomLoggerService,
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: ApiKeyGuard },
   ],
 })

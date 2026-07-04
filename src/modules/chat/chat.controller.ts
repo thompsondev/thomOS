@@ -1,13 +1,14 @@
 import { Body, Controller, Post, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { ChatService } from './chat.service';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { OpenAccessPromptLimitGuard } from '../../middleware/guards/open-access-prompt-limit.guard';
 
 type StreamHistoryItem = { role: 'user' | 'assistant'; content: string };
 type StreamAttachment = { name: string; mimeType: string; data: string };
 
 @ApiTags('Chat')
+@ApiBearerAuth('Authorization')
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}

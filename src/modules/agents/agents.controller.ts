@@ -1,9 +1,14 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AgentId } from '../../lib/database/entities';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../middleware/decorators/current-user.decorator';
 import { OrchestratorService } from './orchestrator/orchestrator.service';
 
 @ApiTags('Agents')
+@ApiBearerAuth('Authorization')
 @Controller('agents')
 export class AgentsController {
   constructor(private readonly orchestrator: OrchestratorService) {}
@@ -15,14 +20,13 @@ export class AgentsController {
   }
 
   @Post('run')
-  @ApiOperation({ summary: 'Run a single agent' })
+  @ApiOperation({ summary: 'Run a single agent as the authenticated user' })
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['agentId', 'userId'],
+      required: ['agentId'],
       properties: {
         agentId: { type: 'string', enum: Object.values(AgentId) },
-        userId: { type: 'string' },
         jobId: { type: 'string' },
         applicationId: { type: 'string' },
         input: { type: 'object' },
@@ -30,16 +34,16 @@ export class AgentsController {
     },
   })
   runAgent(
+    @CurrentUser() user: AuthUser,
     @Body()
     body: {
       agentId: AgentId;
-      userId: string;
       jobId?: string;
       applicationId?: string;
       input?: Record<string, unknown>;
     },
   ) {
-    return this.orchestrator.runAgent(body.agentId, body.userId, {
+    return this.orchestrator.runAgent(body.agentId, user.userId, {
       jobId: body.jobId,
       applicationId: body.applicationId,
       input: body.input,
@@ -48,21 +52,23 @@ export class AgentsController {
 
   @Post('pipeline/discover')
   @ApiOperation({
-    summary: 'Discovery pipeline: find jobs then match each to profile',
+    summary:
+      'Discovery pipeline: fetch live boards, rank with Claude, then match',
   })
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId'],
       properties: {
-        userId: { type: 'string' },
         query: { type: 'string' },
         limit: { type: 'number' },
       },
     },
   })
-  discover(@Body() body: { userId: string; query?: string; limit?: number }) {
-    return this.orchestrator.runDiscoveryPipeline(body.userId, {
+  discover(
+    @CurrentUser() user: AuthUser,
+    @Body() body: { query?: string; limit?: number },
+  ) {
+    return this.orchestrator.runDiscoveryPipeline(user.userId, {
       query: body.query,
       limit: body.limit,
     });
@@ -76,15 +82,12 @@ export class AgentsController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId', 'jobId'],
-      properties: {
-        userId: { type: 'string' },
-        jobId: { type: 'string' },
-      },
+      required: ['jobId'],
+      properties: { jobId: { type: 'string' } },
     },
   })
-  documents(@Body() body: { userId: string; jobId: string }) {
-    return this.orchestrator.runDocumentsPipeline(body.userId, body.jobId);
+  documents(@CurrentUser() user: AuthUser, @Body() body: { jobId: string }) {
+    return this.orchestrator.runDocumentsPipeline(user.userId, body.jobId);
   }
 
   @Post('pipeline/browser')
@@ -95,29 +98,24 @@ export class AgentsController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId', 'jobId'],
+      required: ['jobId'],
       properties: {
-        userId: { type: 'string' },
         jobId: { type: 'string' },
         applicationId: { type: 'string' },
-        confirmSubmit: {
-          type: 'boolean',
-          description:
-            'If true and application is approved, click the submit button',
-        },
+        confirmSubmit: { type: 'boolean' },
       },
     },
   })
   browser(
+    @CurrentUser() user: AuthUser,
     @Body()
     body: {
-      userId: string;
       jobId: string;
       applicationId?: string;
       confirmSubmit?: boolean;
     },
   ) {
-    return this.orchestrator.runAgent(AgentId.BROWSER, body.userId, {
+    return this.orchestrator.runAgent(AgentId.BROWSER, user.userId, {
       jobId: body.jobId,
       applicationId: body.applicationId,
       input: { confirmSubmit: body.confirmSubmit },
@@ -132,38 +130,26 @@ export class AgentsController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId', 'jobId'],
+      required: ['jobId'],
       properties: {
-        userId: { type: 'string' },
         jobId: { type: 'string' },
         questions: { type: 'array', items: { type: 'string' } },
       },
     },
   })
   apply(
-    @Body()
-    body: {
-      userId: string;
-      jobId: string;
-      questions?: string[];
-    },
+    @CurrentUser() user: AuthUser,
+    @Body() body: { jobId: string; questions?: string[] },
   ) {
-    return this.orchestrator.runApplyPipeline(body.userId, body.jobId, {
+    return this.orchestrator.runApplyPipeline(user.userId, body.jobId, {
       questions: body.questions,
     });
   }
 
   @Post('pipeline/insights')
   @ApiOperation({ summary: 'Insights pipeline: analytics then career coach' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['userId'],
-      properties: { userId: { type: 'string' } },
-    },
-  })
-  insights(@Body() body: { userId: string }) {
-    return this.orchestrator.runInsightsPipeline(body.userId);
+  insights(@CurrentUser() user: AuthUser) {
+    return this.orchestrator.runInsightsPipeline(user.userId);
   }
 
   @Get(':agentId')

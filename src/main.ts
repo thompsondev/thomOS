@@ -88,6 +88,7 @@ async function bootstrap() {
       'Authorization',
     )
     .addTag('Server', 'Endpoint for Server functions')
+    .addTag('Auth', 'Register, login, and current user')
     .addTag('Chat', 'Endpoint for Chat functions')
     .addTag('Agents', 'Multi-agent job workflows')
     .addTag('Profile', 'Master profile and filters')

@@ -1,0 +1,68 @@
+{
+  "testedAt": "2026-07-04T03:00:00+01:00",
+  "baseUrl": "http://localhost:3001/v1",
+  "userId": "Topeyemi33@gmail.com",
+  "note": "Port 3000 was running an outdated build; QA used port 3001 with current dist.",
+  "results": [
+    { "step": "Health GET /v1", "status": "PASS" },
+    { "step": "Branding", "status": "PASS" },
+    { "step": "Agents list (9, live discovery)", "status": "PASS" },
+    { "step": "Profile master resume (43 skills, 7 roles)", "status": "PASS" },
+    { "step": "Profile seed refresh", "status": "PASS" },
+    { "step": "Create/list jobs", "status": "PASS" },
+    { "step": "Chat prompt (Claude)", "status": "PASS", "detail": "QA_OK" },
+    { "step": "Documents pipeline CV+cover letter", "status": "PASS" },
+    {
+      "step": "PDF files on disk",
+      "status": "PASS",
+      "detail": "resume 8049 bytes, cover 2955 bytes"
+    },
+    {
+      "step": "PDF HTTP download",
+      "status": "FIXED",
+      "detail": "StreamableFile stream hung; switched to buffer+length"
+    },
+    {
+      "step": "Matching agent",
+      "status": "PASS",
+      "detail": "score 45% on weak-fit RemoteOK role (expected)"
+    },
+    {
+      "step": "Application agent answers",
+      "status": "PASS",
+      "detail": "3 answers, requiresApproval=true"
+    },
+    {
+      "step": "Approve submit + status update",
+      "status": "PASS",
+      "detail": "waiting"
+    },
+    {
+      "step": "Browser agent (Playwright fill, no submit)",
+      "status": "PASS",
+      "detail": "executed=true, submit not clicked"
+    },
+    {
+      "step": "Email agent classify",
+      "status": "PASS",
+      "detail": "category=interview"
+    },
+    { "step": "Insights pipeline (analytics+coach)", "status": "PASS" },
+    {
+      "step": "Live discovery",
+      "status": "PASS",
+      "detail": "fetched=300 filtered=185 saved=3 sources=remoteok,remotive,arbeitnow,greenhouse,ashby"
+    },
+    {
+      "step": "Chat SSE stream",
+      "status": "PASS",
+      "detail": "curl received text+done; PowerShell Invoke-WebRequest hangs on SSE (client issue)"
+    },
+    {
+      "step": "Dashboard counts",
+      "status": "PASS",
+      "detail": "jobsFoundToday=3 waiting=1 found=2 total=3"
+    }
+  ],
+  "summary": { "pass": 18, "fail": 0, "fixedDuringQa": 1 }
+}

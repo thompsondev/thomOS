@@ -3,42 +3,37 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { AgentId, Job } from '../../../lib/database/entities';
 import { AiService } from '../../../lib/ai/ai.service';
+import { JobSourcesService } from '../../../lib/job-sources/job-sources.service';
+import type { RawJobListing } from '../../../lib/job-sources/job-sources.types';
 import { BaseAgent } from '../base/base.agent';
 import type { AgentContext, AgentResult } from '../agents.types';
-
-type DiscoveredJob = {
-  title: string;
-  company: string;
-  location?: string;
-  remote?: boolean;
-  source?: string;
-  sourceUrl?: string;
-  description: string;
-  salaryMin?: number;
-  salaryMax?: number;
-  currency?: string;
-};
 
 @Injectable()
 export class DiscoveryAgent extends BaseAgent {
   readonly id = AgentId.DISCOVERY;
   readonly name = 'Job Discovery Agent';
   readonly responsibilities = [
-    'Search and monitor job boards and career pages',
-    'Filter roles against the user profile criteria',
-    'Normalize listings into structured job records',
-    'Avoid low-quality or off-criteria noise',
+    'Fetch live listings from RemoteOK, Remotive, Arbeitnow, Greenhouse, Ashby, Lever',
+    'Pre-filter by profile skills, keywords, remote, and salary',
+    'Rank real listings with Claude — never invent jobs',
+    'Persist selected jobs for matching and apply pipelines',
   ];
 
   protected readonly systemPrompt = `You are the Job Discovery Agent for RemoteHask.
-Your only job is to find and structure roles that match the user's filters and profile.
-Return ONLY valid JSON: an array of jobs with fields:
-title, company, location, remote (boolean), source, sourceUrl, description, salaryMin, salaryMax, currency.
-Prefer quality over quantity. Never invent employer names or URLs you cannot support.
-If you lack live listings, return an empty array rather than fabricating jobs.`;
+You ONLY rank and select from REAL job listings provided in the user message.
+Never invent employers, titles, or URLs.
+Return ONLY valid JSON:
+{
+  "selectedExternalIds": string[],
+  "reasons": { "<externalId>": "short reason" }
+}
+selectedExternalIds must be a subset of the provided listing ids.
+Prefer senior/lead frontend, AI/automation, NestJS/React/TypeScript fit when relevant.
+Prefer quality over quantity.`;
 
   constructor(
     ai: AiService,
+    private readonly jobSources: JobSourcesService,
     @InjectRepository(Job) private readonly jobs: Repository<Job>,
   ) {
     super(ai);
@@ -49,63 +44,144 @@ If you lack live listings, return an empty array rather than fabricating jobs.`;
       return this.fail('Profile is required for job discovery');
     }
 
+    const limit = Math.min(20, Math.max(1, Number(ctx.input?.limit ?? 8) || 8));
     const query =
       (ctx.input?.query as string | undefined) ??
       [
-        ctx.profile.headline,
         ...(ctx.profile.filters.keywords ?? []),
-        ...(ctx.profile.filters.skills ?? ctx.profile.skills ?? []),
+        ...(ctx.profile.filters.skills ?? []),
       ]
         .filter(Boolean)
+        .slice(0, 4)
         .join(' ');
 
-    const prompt = `Find jobs matching this profile and filters.
-
-Profile headline: ${ctx.profile.headline ?? 'n/a'}
-Skills: ${(ctx.profile.skills ?? []).join(', ') || 'n/a'}
-Filters: ${JSON.stringify(ctx.profile.filters ?? {})}
-Search focus: ${query || 'software engineering roles'}
-Target companies: ${(ctx.profile.filters.targetCompanies ?? []).join(', ') || 'any'}
-
-Return up to ${(ctx.input?.limit as number) ?? 5} strong matches as JSON array.`;
-
     try {
-      const text = await this.think(prompt);
-      const parsed = this.parseJson<DiscoveredJob[]>(text);
-      if (!parsed?.length) {
-        return this.ok('No jobs discovered', { jobs: [], raw: text });
+      const fetched = await this.jobSources.fetchListings({
+        query,
+        skills: ctx.profile.skills,
+        keywords: ctx.profile.filters.keywords,
+        targetCompanies: ctx.profile.filters.targetCompanies,
+        remoteOnly: ctx.profile.filters.remoteOnly,
+        limitPerSource: 35,
+      });
+
+      const filtered = this.jobSources.prefilter(
+        fetched,
+        ctx.profile.filters ?? {},
+        ctx.profile.skills ?? [],
+      );
+
+      if (!filtered.length) {
+        return this.ok('No live listings matched your filters', {
+          jobs: [],
+          jobIds: [],
+          fetched: fetched.length,
+          filtered: 0,
+          sources: this.sourceCounts(fetched),
+        });
       }
 
+      const candidates = filtered.slice(0, 40);
+      const compact = candidates.map((job) => ({
+        externalId: job.externalId,
+        title: job.title,
+        company: job.company,
+        location: job.location,
+        remote: job.remote,
+        source: job.source,
+        sourceUrl: job.sourceUrl,
+        salaryMin: job.salaryMin,
+        salaryMax: job.salaryMax,
+        snippet: job.description.replace(/<[^>]+>/g, ' ').slice(0, 400),
+      }));
+
+      const prompt = `Select up to ${limit} best roles for this candidate from REAL listings only.
+
+Profile headline: ${ctx.profile.headline ?? 'n/a'}
+Skills: ${(ctx.profile.skills ?? []).slice(0, 30).join(', ')}
+Filters: ${JSON.stringify(ctx.profile.filters ?? {})}
+Search focus: ${query || 'software engineering'}
+
+Listings:
+${JSON.stringify(compact)}`;
+
+      const text = await this.think(prompt);
+      const parsed = this.parseJson<{
+        selectedExternalIds: string[];
+        reasons?: Record<string, string>;
+      }>(text);
+
+      const byId = new Map(candidates.map((j) => [j.externalId, j]));
+      const selectedIds = (parsed?.selectedExternalIds ?? [])
+        .filter((id) => byId.has(id))
+        .slice(0, limit);
+
+      // Fallback: if Claude returns nothing valid, take top prefiltered listings
+      const chosen: RawJobListing[] = (
+        selectedIds.length
+          ? selectedIds.map((id) => byId.get(id)!)
+          : candidates.slice(0, limit)
+      ).filter(Boolean);
+
+      const existing = await this.jobs.find({
+        where: { userId: ctx.userId },
+        select: { sourceUrl: true },
+      });
+      const existingUrls = new Set(
+        existing.map((j) => (j.sourceUrl ?? '').toLowerCase()).filter(Boolean),
+      );
+
       const saved: Job[] = [];
-      for (const item of parsed) {
-        if (!item.title || !item.company || !item.description) continue;
+      for (const item of chosen) {
+        if (!item.title || !item.company || !item.sourceUrl) continue;
+        if (existingUrls.has(item.sourceUrl.toLowerCase())) continue;
+
         const job = this.jobs.create({
           userId: ctx.userId,
           title: item.title,
           company: item.company,
           location: item.location ?? null,
           remote: Boolean(item.remote ?? ctx.profile.filters.remoteOnly),
-          source: item.source ?? 'discovery_agent',
-          sourceUrl: item.sourceUrl ?? null,
-          description: item.description,
+          source: item.source,
+          sourceUrl: item.sourceUrl,
+          description: item.description.slice(0, 20_000),
           salaryMin: item.salaryMin ?? null,
           salaryMax: item.salaryMax ?? null,
           currency: item.currency ?? null,
           missingSkills: [],
           matchedSkills: [],
-          metadata: { discoveredBy: this.id },
+          metadata: {
+            discoveredBy: this.id,
+            externalId: item.externalId,
+            reason: parsed?.reasons?.[item.externalId] ?? null,
+            tags: item.tags ?? [],
+          },
         });
         saved.push(await this.jobs.save(job));
+        existingUrls.add(item.sourceUrl.toLowerCase());
       }
 
-      return this.ok(`Discovered ${saved.length} job(s)`, {
+      return this.ok(`Discovered ${saved.length} live job(s)`, {
         jobs: saved,
         jobIds: saved.map((j) => j.id),
+        fetched: fetched.length,
+        filtered: filtered.length,
+        ranked: chosen.length,
+        sources: this.sourceCounts(fetched),
+        reasons: parsed?.reasons ?? {},
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       this.logger.error(message);
       return this.fail(message);
     }
+  }
+
+  private sourceCounts(listings: RawJobListing[]): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const job of listings) {
+      counts[job.source] = (counts[job.source] ?? 0) + 1;
+    }
+    return counts;
   }
 }

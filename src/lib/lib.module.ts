@@ -3,8 +3,15 @@ import { DatabaseModule } from './database/database.module';
 import { AiModule } from './ai/ai.module';
 import { PdfModule } from './pdf/pdf.module';
 import { BrowserModule } from './browser/browser.module';
+import { JobSourcesModule } from './job-sources/job-sources.module';
 
 @Module({
-  imports: [DatabaseModule, AiModule, PdfModule, BrowserModule],
+  imports: [
+    DatabaseModule,
+    AiModule,
+    PdfModule,
+    BrowserModule,
+    JobSourcesModule,
+  ],
 })
 export class LibModule {}

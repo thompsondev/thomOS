@@ -25,23 +25,19 @@ export class ProfileService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    const existing = await this.profiles.findOne({
-      where: { userId: THOMPSON_USER_ID },
-    });
-    if (existing) {
-      this.logger.log(`Master profile already loaded for ${THOMPSON_USER_ID}`);
-      return;
-    }
-
-    await this.upsert(thompsonOpeyemiProfile);
-    this.logger.log(
-      `Seeded master profile for Thompson Opeyemi (${THOMPSON_USER_ID})`,
-    );
+    await this.seedThompsonProfileForUser(THOMPSON_USER_ID);
   }
 
-  /** Load / refresh Thompson's resume as the master profile (source of truth for CV & cover letters). */
-  async seedThompsonProfile(): Promise<Profile> {
-    return this.upsert(thompsonOpeyemiProfile);
+  /** Load / refresh Thompson's resume onto a user id (defaults to Thompson's email). */
+  async seedThompsonProfileForUser(
+    userId: string = THOMPSON_USER_ID,
+  ): Promise<Profile> {
+    const profile = await this.upsert({
+      ...thompsonOpeyemiProfile,
+      userId,
+    });
+    this.logger.log(`Master profile ready for ${userId}`);
+    return profile;
   }
 
   async upsert(dto: UpsertProfileDto): Promise<Profile> {
@@ -80,9 +76,5 @@ export class ProfileService implements OnModuleInit {
       throw new NotFoundException(`Profile not found for user ${userId}`);
     }
     return profile;
-  }
-
-  getDefaultUserId(): string {
-    return THOMPSON_USER_ID;
   }
 }

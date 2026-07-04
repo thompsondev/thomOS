@@ -1,22 +1,27 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../middleware/decorators/current-user.decorator';
 import { CreateJobDto, JobsService } from './jobs.service';
 
 @ApiTags('Jobs')
+@ApiBearerAuth('Authorization')
 @Controller('jobs')
 export class JobsController {
   constructor(private readonly jobsService: JobsService) {}
 
-  @Get('user/:userId')
-  @ApiOperation({ summary: 'List jobs for a user' })
-  list(@Param('userId') userId: string) {
-    return this.jobsService.listByUser(userId);
+  @Get()
+  @ApiOperation({ summary: 'List jobs for the authenticated user' })
+  list(@CurrentUser() user: AuthUser) {
+    return this.jobsService.listByUser(user.userId);
   }
 
-  @Get(':userId/:id')
-  @ApiOperation({ summary: 'Get a job' })
-  get(@Param('userId') userId: string, @Param('id') id: string) {
-    return this.jobsService.get(userId, id);
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a job owned by the authenticated user' })
+  get(@CurrentUser() user: AuthUser, @Param('id') id: string) {
+    return this.jobsService.get(user.userId, id);
   }
 
   @Post()
@@ -24,9 +29,8 @@ export class JobsController {
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId', 'title', 'company', 'description'],
+      required: ['title', 'company', 'description'],
       properties: {
-        userId: { type: 'string' },
         title: { type: 'string' },
         company: { type: 'string' },
         description: { type: 'string' },
@@ -40,7 +44,10 @@ export class JobsController {
       },
     },
   })
-  create(@Body() body: CreateJobDto) {
-    return this.jobsService.create(body);
+  create(
+    @CurrentUser() user: AuthUser,
+    @Body() body: Omit<CreateJobDto, 'userId'>,
+  ) {
+    return this.jobsService.create({ ...body, userId: user.userId });
   }
 }

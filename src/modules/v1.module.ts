@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
 import { ChatModule } from './chat/chat.module';
 import { AgentsModule } from './agents/agents.module';
 import { ProfileModule } from './profile/profile.module';
@@ -7,6 +8,7 @@ import { ApplicationsModule } from './applications/applications.module';
 
 @Module({
   imports: [
+    AuthModule,
     ChatModule,
     AgentsModule,
     ProfileModule,

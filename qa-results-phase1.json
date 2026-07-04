@@ -1,0 +1,47 @@
+﻿[
+    {
+        "Step":  "GET /v1 health",
+        "Status":  "PASS",
+        "Detail":  "\"Hello World!\""
+    },
+    {
+        "Step":  "GET /v1/branding",
+        "Status":  "PASS",
+        "Detail":  "{\"authorName\":\"thomOS.ai\",\"authorUrl\":\"https://thomos.ai\"}"
+    },
+    {
+        "Step":  "GET /v1/agents (9 agents)",
+        "Status":  "PASS",
+        "Detail":  "[{\"id\":\"discovery\",\"name\":\"Job Discovery Agent\",\"responsibilities\":[\"Search and monitor job boards and career pages\",\"Filter roles against the user profile criteria\",\"Normalize listings into structure"
+    },
+    {
+        "Step":  "GET /v1/profile (master resume)",
+        "Status":  "PASS",
+        "Detail":  "{\"experience\":7,\"fullName\":\"Thompson Opeyemi Odunayo\",\"skills\":43,\"resumeLen\":6394}"
+    },
+    {
+        "Step":  "POST /v1/profile/seed/thompson",
+        "Status":  "PASS",
+        "Detail":  "{\"userId\":\"Topeyemi33@gmail.com\",\"fullName\":\"Thompson Opeyemi Odunayo\"}"
+    },
+    {
+        "Step":  "POST /v1/jobs (manual job)",
+        "Status":  "PASS",
+        "Detail":  "{\"id\":\"5729c467-5b5a-4700-b07c-eadde83cc615\",\"userId\":\"Topeyemi33@gmail.com\",\"title\":\"Senior Frontend Engineer\",\"company\":\"QA Test Co\",\"location\":\"Remote\",\"remote\":true,\"source\":\"manual_qa\",\"sourceUrl"
+    },
+    {
+        "Step":  "GET /v1/jobs/user",
+        "Status":  "PASS",
+        "Detail":  "{\"count\":1}"
+    },
+    {
+        "Step":  "GET /v1/applications/dashboard",
+        "Status":  "PASS",
+        "Detail":  "{\"jobsFoundToday\":0,\"applied\":0,\"waiting\":0,\"interview\":0,\"rejected\":0,\"offer\":0,\"found\":0,\"total\":0}"
+    },
+    {
+        "Step":  "POST /v1/chat/prompt (Claude)",
+        "Status":  "FAIL",
+        "Detail":  "The remote server returned an error: (500) Internal Server Error."
+    }
+]

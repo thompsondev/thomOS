@@ -1,42 +1,39 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Put } from '@nestjs/common';
+import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  CurrentUser,
+  type AuthUser,
+} from '../../middleware/decorators/current-user.decorator';
 import { ProfileService } from './profile.service';
 import type { UpsertProfileDto } from './profile.types';
 
 @ApiTags('Profile')
+@ApiBearerAuth('Authorization')
 @Controller('profile')
 export class ProfileController {
   constructor(private readonly profileService: ProfileService) {}
 
-  @Post('seed/thompson')
+  @Get('me')
+  @ApiOperation({ summary: 'Get master profile for the authenticated user' })
+  getMine(@CurrentUser() user: AuthUser) {
+    return this.profileService.getByUserId(user.userId);
+  }
+
+  @Post('seed/master')
   @ApiOperation({
     summary:
-      'Load / refresh Thompson Opeyemi master resume (used for tailored CV & cover letters)',
+      'Load / refresh Thompson master resume onto the authenticated user profile',
   })
-  seedThompson() {
-    return this.profileService.seedThompsonProfile();
+  seedMaster(@CurrentUser() user: AuthUser) {
+    return this.profileService.seedThompsonProfileForUser(user.userId);
   }
 
-  @Get('me/default-user-id')
-  @ApiOperation({ summary: 'Default userId for the seeded master profile' })
-  defaultUserId() {
-    return { userId: this.profileService.getDefaultUserId() };
-  }
-
-  @Get(':userId')
-  @ApiOperation({ summary: 'Get master profile for a user' })
-  get(@Param('userId') userId: string) {
-    return this.profileService.getByUserId(userId);
-  }
-
-  @Put()
-  @ApiOperation({ summary: 'Create or update master profile' })
+  @Put('me')
+  @ApiOperation({ summary: 'Create or update master profile for current user' })
   @ApiBody({
     schema: {
       type: 'object',
-      required: ['userId'],
       properties: {
-        userId: { type: 'string' },
         fullName: { type: 'string' },
         headline: { type: 'string' },
         summary: { type: 'string' },
@@ -47,7 +44,10 @@ export class ProfileController {
       },
     },
   })
-  upsert(@Body() body: UpsertProfileDto) {
-    return this.profileService.upsert(body);
+  upsertMine(
+    @CurrentUser() user: AuthUser,
+    @Body() body: Omit<UpsertProfileDto, 'userId'>,
+  ) {
+    return this.profileService.upsert({ ...body, userId: user.userId });
   }
 }
