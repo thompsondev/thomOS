@@ -13,6 +13,7 @@ import {
   AgentRun,
   Application,
   Document,
+  EmailMessage,
   Job,
   Profile,
   User,
@@ -36,7 +37,15 @@ async function main() {
   const ds = new DataSource({
     type: 'postgres',
     url,
-    entities: [User, Profile, Job, Application, Document, AgentRun],
+    entities: [
+      User,
+      Profile,
+      Job,
+      Application,
+      Document,
+      AgentRun,
+      EmailMessage,
+    ],
     synchronize: true,
   });
 

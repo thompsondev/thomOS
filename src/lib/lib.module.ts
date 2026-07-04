@@ -4,6 +4,7 @@ import { AiModule } from './ai/ai.module';
 import { PdfModule } from './pdf/pdf.module';
 import { BrowserModule } from './browser/browser.module';
 import { JobSourcesModule } from './job-sources/job-sources.module';
+import { EmailModule } from './email/email.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { JobSourcesModule } from './job-sources/job-sources.module';
     PdfModule,
     BrowserModule,
     JobSourcesModule,
+    EmailModule,
   ],
 })
 export class LibModule {}

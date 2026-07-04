@@ -116,7 +116,13 @@ export class AuthService implements OnModuleInit {
       [email, legacyId],
     );
 
-    for (const table of ['Job', 'Application', 'Document', 'AgentRun']) {
+    for (const table of [
+      'Job',
+      'Application',
+      'Document',
+      'AgentRun',
+      'EmailMessage',
+    ]) {
       await this.dataSource.query(
         `UPDATE "${table}" SET "userId" = $1 WHERE "userId" = $2`,
         [email, legacyId],
@@ -133,7 +139,13 @@ export class AuthService implements OnModuleInit {
       `UPDATE "Profile" SET "userId" = $1 WHERE "userId" = $2`,
       [email, typoId],
     );
-    for (const table of ['Job', 'Application', 'Document', 'AgentRun']) {
+    for (const table of [
+      'Job',
+      'Application',
+      'Document',
+      'AgentRun',
+      'EmailMessage',
+    ]) {
       await this.dataSource.query(
         `UPDATE "${table}" SET "userId" = $1 WHERE "userId" = $2`,
         [email, typoId],

@@ -94,6 +94,7 @@ async function bootstrap() {
     .addTag('Profile', 'Master profile and filters')
     .addTag('Jobs', 'Discovered and manual job listings')
     .addTag('Applications', 'Application tracking and dashboard')
+    .addTag('Emails', 'Inbox ingest and recruiter email classification')
     .build();
 
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerOptions);

@@ -462,6 +462,53 @@
         border-radius: 999px;
         background: var(--surface);
       }
+
+      .row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .btn-xs {
+        padding: 6px 10px;
+        font-size: 0.72rem;
+        border-radius: 8px;
+        font-family: var(--mono);
+        letter-spacing: 0.02em;
+      }
+
+      .grid-3 {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr 0.9fr;
+        gap: 16px;
+      }
+
+      @media (max-width: 1100px) {
+        .grid-3 {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .busy-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 8, 11, 0.55);
+        display: grid;
+        place-items: center;
+        z-index: 40;
+        backdrop-filter: blur(2px);
+      }
+
+      .busy-card {
+        background: var(--surface);
+        border: 1px solid var(--border-hi);
+        border-radius: 14px;
+        padding: 18px 22px;
+        font-family: var(--mono);
+        font-size: 0.82rem;
+        color: var(--text-2);
+      }
     </style>
   </head>
   <body>
@@ -494,6 +541,9 @@
           <span class="profile-chip" id="profile-chip">—</span>
           <button class="btn btn-teal" id="discover-btn" type="button">
             Discover jobs
+          </button>
+          <button class="btn btn-ghost" id="sync-inbox-btn" type="button">
+            Sync Gmail
           </button>
           <button class="btn btn-ghost" id="refresh-btn" type="button">
             Refresh
@@ -534,7 +584,7 @@
         </div>
       </section>
 
-      <div class="grid-2">
+      <div class="grid-3">
         <section class="panel">
           <div class="panel-head">
             <h2>Jobs</h2>
@@ -554,9 +604,64 @@
             <div class="empty">No applications yet.</div>
           </div>
         </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Documents</h2>
+            <span class="count" id="docs-count">0</span>
+          </div>
+          <div class="list" id="docs-list">
+            <div class="empty">No tailored docs yet.</div>
+          </div>
+        </section>
       </div>
+
+      <section class="panel" style="margin-top: 16px">
+        <div class="panel-head">
+          <h2>Inbox</h2>
+          <span class="count" id="emails-count">0</span>
+        </div>
+        <div style="padding: 16px 18px; border-bottom: 1px solid var(--border)">
+          <div class="field" style="margin-bottom: 10px">
+            <label for="email-from">From</label>
+            <input id="email-from" type="text" placeholder="recruiter@company.com" />
+          </div>
+          <div class="field" style="margin-bottom: 10px">
+            <label for="email-subject">Subject</label>
+            <input id="email-subject" type="text" placeholder="Interview invitation" />
+          </div>
+          <div class="field" style="margin-bottom: 12px">
+            <label for="email-body">Email body</label>
+            <textarea
+              id="email-body"
+              rows="5"
+              placeholder="Paste recruiter email here…"
+              style="
+                width: 100%;
+                background: var(--surface-2);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 12px 14px;
+                outline: none;
+                resize: vertical;
+                font-family: var(--mono);
+                font-size: 0.8rem;
+              "
+            ></textarea>
+          </div>
+          <button class="btn btn-teal btn-xs" id="ingest-email-btn" type="button">
+            Classify email
+          </button>
+        </div>
+        <div class="list" id="emails-list">
+          <div class="empty">No emails classified yet.</div>
+        </div>
+      </section>
     </div>
 
+    <div class="busy-overlay hidden" id="busy">
+      <div class="busy-card" id="busy-text">Working…</div>
+    </div>
     <div class="toast" id="toast"></div>
 
     <script>
@@ -588,11 +693,21 @@
         setTimeout(() => el.classList.remove('show'), 3200);
       }
 
+      function setBusy(msg) {
+        const el = $('busy');
+        if (!msg) {
+          el.classList.add('hidden');
+          return;
+        }
+        $('busy-text').textContent = msg;
+        el.classList.remove('hidden');
+      }
+
       async function api(path, options = {}) {
         const headers = {
-          'Content-Type': 'application/json',
           ...(options.headers || {}),
         };
+        if (!options.raw) headers['Content-Type'] = 'application/json';
         const t = token();
         if (t) headers.Authorization = `Bearer ${t}`;
 
@@ -601,6 +716,12 @@
           clearSession();
           showLogin();
           throw new Error('Session expired. Sign in again.');
+        }
+        if (options.blob) {
+          if (!res.ok) {
+            throw new Error(`Download failed (${res.status})`);
+          }
+          return res.blob();
         }
         const text = await res.text();
         let data = null;
@@ -666,7 +787,8 @@
         const link = job.sourceUrl
           ? `<a class="link" href="${escapeAttr(job.sourceUrl)}" target="_blank" rel="noopener">Open listing</a>`
           : '';
-        return `<div class="row">
+        const hasUrl = !!job.sourceUrl;
+        return `<div class="row" data-job-id="${escapeAttr(job.id)}">
           <div class="title">${escapeHtml(job.title)}</div>
           <div class="meta">
             <span>${escapeHtml(job.company)}</span>
@@ -674,6 +796,16 @@
             <span>${escapeHtml(job.source || 'manual')}</span>
             ${score}
             ${link}
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-teal btn-xs" data-action="docs" data-job-id="${escapeAttr(job.id)}" type="button">Generate docs</button>
+            <button class="btn btn-ghost btn-xs" data-action="apply" data-job-id="${escapeAttr(job.id)}" type="button">Apply prep</button>
+            ${
+              hasUrl
+                ? `<button class="btn btn-ghost btn-xs" data-action="fill" data-job-id="${escapeAttr(job.id)}" type="button">Fill form</button>`
+                : ''
+            }
+            <button class="btn btn-ghost btn-xs" data-action="email-apply" data-job-id="${escapeAttr(job.id)}" type="button">Email CV</button>
           </div>
         </div>`;
       }
@@ -687,13 +819,85 @@
           app.matchScore != null
             ? `<span class="score">${Math.round(app.matchScore)}%</span>`
             : '';
-        return `<div class="row">
+        const approveBtn = app.autoSubmitApproved
+          ? ''
+          : `<button class="btn btn-teal btn-xs" data-action="approve" data-app-id="${escapeAttr(app.id)}" type="button">Approve submit</button>`;
+        const fillBtn = job?.sourceUrl
+          ? `<button class="btn btn-ghost btn-xs" data-action="fill" data-job-id="${escapeAttr(app.jobId)}" data-app-id="${escapeAttr(app.id)}" type="button">Fill form</button>`
+          : '';
+        return `<div class="row" data-app-id="${escapeAttr(app.id)}">
           <div class="title">${escapeHtml(title)}</div>
           <div class="meta">
             <span class="badge ${escapeAttr(app.status)}">${escapeHtml(app.status)}</span>
             ${score}
             <span>${app.autoSubmitApproved ? 'submit approved' : 'needs approval'}</span>
           </div>
+          <div class="row-actions">
+            ${approveBtn}
+            ${fillBtn}
+            <button class="btn btn-ghost btn-xs" data-action="status" data-app-id="${escapeAttr(app.id)}" data-status="waiting" type="button">Mark waiting</button>
+            <button class="btn btn-ghost btn-xs" data-action="status" data-app-id="${escapeAttr(app.id)}" data-status="applied" type="button">Mark applied</button>
+          </div>
+        </div>`;
+      }
+
+      function docRow(doc, jobsById) {
+        const job = doc.jobId ? jobsById.get(doc.jobId) : null;
+        const jobLabel = job
+          ? `${job.title} · ${job.company}`
+          : doc.jobId
+            ? 'Linked job'
+            : 'General';
+        const typeLabel =
+          doc.type === 'resume'
+            ? 'CV'
+            : doc.type === 'cover_letter'
+              ? 'Cover letter'
+              : doc.type;
+        const hasPdf = !!doc.metadata?.filePath;
+        return `<div class="row" data-doc-id="${escapeAttr(doc.id)}">
+          <div class="title">${escapeHtml(typeLabel)} — ${escapeHtml(doc.title)}</div>
+          <div class="meta">
+            <span>${escapeHtml(jobLabel)}</span>
+            <span>${hasPdf ? 'PDF ready' : 'text only'}</span>
+          </div>
+          <div class="row-actions">
+            ${
+              hasPdf
+                ? `<button class="btn btn-teal btn-xs" data-action="pdf" data-doc-id="${escapeAttr(doc.id)}" data-doc-title="${escapeAttr(doc.title)}" type="button">Download PDF</button>`
+                : ''
+            }
+          </div>
+        </div>`;
+      }
+
+      function emailRow(email, jobsById) {
+        const job = email.jobId ? jobsById.get(email.jobId) : null;
+        const jobLabel = job ? `${job.company}` : 'unlinked';
+        const when = email.interviewAt
+          ? `interview ${new Date(email.interviewAt).toLocaleString()}`
+          : '';
+        return `<div class="row">
+          <div class="title">${escapeHtml(email.subject || '(no subject)')}</div>
+          <div class="meta">
+            <span class="badge ${escapeAttr(email.category || 'other')}">${escapeHtml(email.category || 'other')}</span>
+            <span>${escapeHtml(email.fromAddress || 'unknown sender')}</span>
+            <span>${escapeHtml(jobLabel)}</span>
+            ${when ? `<span>${escapeHtml(when)}</span>` : ''}
+            ${
+              email.applicationStatus
+                ? `<span>app → ${escapeHtml(email.applicationStatus)}</span>`
+                : ''
+            }
+          </div>
+          <div class="meta" style="margin-top: 4px; color: var(--text-3)">
+            ${escapeHtml(email.summary || '')}
+          </div>
+          ${
+            email.calendarSuggestion
+              ? `<div class="meta" style="margin-top: 4px; color: var(--violet)">Calendar: ${escapeHtml(email.calendarSuggestion)}</div>`
+              : ''
+          }
         </div>`;
       }
 
@@ -709,11 +913,15 @@
         return escapeHtml(s).replace(/'/g, '&#39;');
       }
 
+      let cache = { jobs: [], apps: [], docs: [] };
+
       async function refresh() {
-        const [dash, jobs, apps, profile, me] = await Promise.all([
+        const [dash, jobs, apps, docs, emails, profile, me] = await Promise.all([
           api('/applications/dashboard'),
           api('/jobs'),
           api('/applications'),
+          api('/applications/documents'),
+          api('/emails'),
           api('/profile/me'),
           api('/auth/me'),
         ]);
@@ -722,10 +930,15 @@
 
         const jobsList = Array.isArray(jobs) ? jobs : [];
         const appsList = Array.isArray(apps) ? apps : [];
+        const docsList = Array.isArray(docs) ? docs : [];
+        const emailsList = Array.isArray(emails) ? emails : [];
         const jobsById = new Map(jobsList.map((j) => [j.id, j]));
+        cache = { jobs: jobsList, apps: appsList, docs: docsList };
 
         $('jobs-count').textContent = String(jobsList.length);
         $('apps-count').textContent = String(appsList.length);
+        $('docs-count').textContent = String(docsList.length);
+        $('emails-count').textContent = String(emailsList.length);
 
         $('jobs-list').innerHTML = jobsList.length
           ? jobsList.map(jobRow).join('')
@@ -735,16 +948,213 @@
           ? appsList.map((a) => appRow(a, jobsById)).join('')
           : '<div class="empty">No applications yet.</div>';
 
+        $('docs-list').innerHTML = docsList.length
+          ? docsList.map((d) => docRow(d, jobsById)).join('')
+          : '<div class="empty">No tailored docs yet.</div>';
+
+        $('emails-list').innerHTML = emailsList.length
+          ? emailsList.map((e) => emailRow(e, jobsById)).join('')
+          : '<div class="empty">No emails classified yet.</div>';
+
         $('user-line').textContent = me.email;
         $('profile-chip').textContent =
           profile.headline || profile.fullName || 'Profile loaded';
       }
 
-      async function discover() {
-        const btn = $('discover-btn');
-        btn.disabled = true;
-        btn.textContent = 'Discovering…';
+      async function ingestEmail() {
+        const body = $('email-body').value.trim();
+        if (!body) {
+          toast('Paste an email body first', true);
+          return;
+        }
+        await runAction('Classifying email…', async () => {
+          const record = await api('/emails/ingest', {
+            method: 'POST',
+            body: JSON.stringify({
+              fromAddress: $('email-from').value.trim() || undefined,
+              subject: $('email-subject').value.trim() || undefined,
+              body,
+            }),
+          });
+          $('email-body').value = '';
+          $('email-subject').value = '';
+          $('email-from').value = '';
+          toast(
+            record.category
+              ? `Classified as ${record.category}${record.applicationStatus ? ` → ${record.applicationStatus}` : ''}`
+              : 'Email ingested',
+          );
+        });
+      }
+
+      async function emailApply(jobId) {
+        const to = window.prompt(
+          'Send CV + cover letter to which email address?',
+        );
+        if (!to || !to.includes('@')) {
+          if (to !== null) toast('Enter a valid email address', true);
+          return;
+        }
+        await runAction('Emailing application via Gmail…', async () => {
+          const result = await api('/emails/apply', {
+            method: 'POST',
+            body: JSON.stringify({ jobId, to: to.trim() }),
+          });
+          toast(`Sent to ${result.to} — ${result.subject}`);
+        });
+      }
+
+      async function syncInbox() {
+        await runAction('Syncing Gmail inbox…', async () => {
+          const result = await api('/emails/sync-inbox', {
+            method: 'POST',
+            body: JSON.stringify({ limit: 10 }),
+          });
+          toast(
+            `Gmail sync: fetched ${result.fetched}, classified ${result.ingested}`,
+          );
+        });
+      }
+
+      async function runAction(label, fn) {
+        setBusy(label);
         try {
+          await fn();
+          await refresh();
+        } catch (e) {
+          toast(e.message, true);
+        } finally {
+          setBusy(null);
+        }
+      }
+
+      async function generateDocs(jobId) {
+        await runAction('Generating CV & cover letter…', async () => {
+          const result = await api('/agents/pipeline/documents', {
+            method: 'POST',
+            body: JSON.stringify({ jobId }),
+          });
+          const failed = (result.steps || []).filter((s) => !s.success);
+          if (failed.length) {
+            throw new Error(failed.map((s) => s.error || s.summary).join('; '));
+          }
+          toast('CV and cover letter ready (PDFs saved)');
+        });
+      }
+
+      async function applyPrep(jobId) {
+        await runAction('Running apply prep pipeline…', async () => {
+          const result = await api('/agents/pipeline/apply', {
+            method: 'POST',
+            body: JSON.stringify({ jobId }),
+          });
+          const failed = (result.steps || []).filter((s) => !s.success);
+          if (failed.length) {
+            throw new Error(failed.map((s) => s.error || s.summary).join('; '));
+          }
+          toast('Apply prep done — review docs & approve submit');
+        });
+      }
+
+      async function fillForm(jobId, applicationId) {
+        let appId = applicationId;
+        if (!appId) {
+          const existing = cache.apps.find((a) => a.jobId === jobId);
+          appId = existing?.id;
+        }
+        if (!appId) {
+          // Create application via matching first
+          await runAction('Matching job before fill…', async () => {
+            const match = await api('/agents/run', {
+              method: 'POST',
+              body: JSON.stringify({ agentId: 'matching', jobId }),
+            });
+            if (!match.success) throw new Error(match.error || match.summary);
+            appId = match.data?.applicationId;
+          });
+        }
+        if (!appId) {
+          toast('No application found for this job', true);
+          return;
+        }
+
+        const app = cache.apps.find((a) => a.id === appId);
+        if (app && !app.autoSubmitApproved) {
+          await runAction('Approving submit for form fill…', async () => {
+            await api(`/applications/${appId}/approve-submit`, {
+              method: 'PATCH',
+              body: '{}',
+            });
+          });
+        }
+
+        await runAction('Filling application form (no submit click)…', async () => {
+          const result = await api('/agents/pipeline/browser', {
+            method: 'POST',
+            body: JSON.stringify({
+              jobId,
+              applicationId: appId,
+              confirmSubmit: false,
+            }),
+          });
+          if (!result.success) {
+            throw new Error(result.error || result.summary || 'Browser agent failed');
+          }
+          const filled = result.data?.filled?.length ?? 0;
+          const uploaded = result.data?.uploaded ? 'resume uploaded' : 'no upload';
+          toast(
+            result.data?.executed
+              ? `Form filled (${filled} fields, ${uploaded}) — submit not clicked`
+              : result.summary || 'Browser plan ready',
+          );
+        });
+      }
+
+      async function approveSubmit(appId) {
+        await runAction('Approving submit…', async () => {
+          await api(`/applications/${appId}/approve-submit`, {
+            method: 'PATCH',
+            body: '{}',
+          });
+          toast('Submit approved for this application');
+        });
+      }
+
+      async function setStatus(appId, status) {
+        await runAction(`Marking ${status}…`, async () => {
+          await api(`/applications/${appId}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status }),
+          });
+          toast(`Status → ${status}`);
+        });
+      }
+
+      async function downloadPdf(docId, title) {
+        try {
+          setBusy('Downloading PDF…');
+          const blob = await api(`/applications/documents/${docId}/pdf`, {
+            blob: true,
+            headers: {},
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${(title || 'document').replace(/[^\w.-]+/g, '_').slice(0, 60)}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast('PDF downloaded');
+        } catch (e) {
+          toast(e.message, true);
+        } finally {
+          setBusy(null);
+        }
+      }
+
+      async function discover() {
+        await runAction('Discovering live jobs…', async () => {
           const result = await api('/agents/pipeline/discover', {
             method: 'POST',
             body: JSON.stringify({
@@ -754,19 +1164,11 @@
           });
           const disc = (result.steps || []).find((s) => s.agentId === 'discovery');
           const saved = disc?.data?.jobIds?.length ?? 0;
-          toast(
-            disc?.success
-              ? `Discovery done — ${saved} new job(s) saved`
-              : disc?.error || 'Discovery finished',
-            !disc?.success,
-          );
-          await refresh();
-        } catch (e) {
-          toast(e.message, true);
-        } finally {
-          btn.disabled = false;
-          btn.textContent = 'Discover jobs';
-        }
+          if (!disc?.success) {
+            throw new Error(disc?.error || 'Discovery failed');
+          }
+          toast(`Discovery done — ${saved} new job(s) saved`);
+        });
       }
 
       async function bootApp() {
@@ -779,6 +1181,25 @@
           showLogin();
         }
       }
+
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-action]');
+        if (!btn) return;
+        const action = btn.dataset.action;
+        const jobId = btn.dataset.jobId;
+        const appId = btn.dataset.appId;
+        const docId = btn.dataset.docId;
+        const status = btn.dataset.status;
+        const docTitle = btn.dataset.docTitle;
+
+        if (action === 'docs' && jobId) generateDocs(jobId);
+        if (action === 'apply' && jobId) applyPrep(jobId);
+        if (action === 'fill' && jobId) fillForm(jobId, appId);
+        if (action === 'email-apply' && jobId) emailApply(jobId);
+        if (action === 'approve' && appId) approveSubmit(appId);
+        if (action === 'status' && appId && status) setStatus(appId, status);
+        if (action === 'pdf' && docId) downloadPdf(docId, docTitle);
+      });
 
       $('login-btn').addEventListener('click', login);
       $('password').addEventListener('keydown', (e) => {
@@ -797,6 +1218,8 @@
         }
       });
       $('discover-btn').addEventListener('click', discover);
+      $('sync-inbox-btn').addEventListener('click', syncInbox);
+      $('ingest-email-btn').addEventListener('click', ingestEmail);
 
       if (token()) bootApp();
       else showLogin();

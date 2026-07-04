@@ -5,12 +5,21 @@ import {
   AgentRun,
   Application,
   Document,
+  EmailMessage,
   Job,
   Profile,
   User,
 } from './entities';
 
-const entities = [User, Profile, Job, Application, Document, AgentRun];
+const entities = [
+  User,
+  Profile,
+  Job,
+  Application,
+  Document,
+  AgentRun,
+  EmailMessage,
+];
 
 @Global()
 @Module({
