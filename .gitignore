@@ -46,6 +46,9 @@ lerna-debug.log*
 .temp
 .tmp
 
+# Generated PDFs and browser screenshots
+/storage
+
 # Runtime data
 pids
 *.pid

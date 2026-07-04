@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { access } from 'fs/promises';
 import { Repository } from 'typeorm';
 import {
   Application,
@@ -74,5 +75,31 @@ export class ApplicationsService {
       where: applicationId ? { userId, applicationId } : { userId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async getDocument(userId: string, documentId: string): Promise<Document> {
+    const doc = await this.documents.findOne({
+      where: { id: documentId, userId },
+    });
+    if (!doc) throw new NotFoundException('Document not found');
+    return doc;
+  }
+
+  async getDocumentPdfPath(
+    userId: string,
+    documentId: string,
+  ): Promise<{ filePath: string; title: string }> {
+    const doc = await this.getDocument(userId, documentId);
+    const filePath =
+      typeof doc.metadata?.filePath === 'string' ? doc.metadata.filePath : null;
+    if (!filePath) {
+      throw new NotFoundException('PDF not generated for this document');
+    }
+    try {
+      await access(filePath);
+    } catch {
+      throw new NotFoundException('PDF file missing on disk');
+    }
+    return { filePath, title: doc.title };
   }
 }

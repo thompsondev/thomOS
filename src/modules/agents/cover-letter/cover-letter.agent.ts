@@ -7,6 +7,7 @@ import {
   DocumentType,
 } from '../../../lib/database/entities';
 import { AiService } from '../../../lib/ai/ai.service';
+import { PdfService } from '../../../lib/pdf/pdf.service';
 import { BaseAgent } from '../base/base.agent';
 import type { AgentContext, AgentResult } from '../agents.types';
 import {
@@ -53,6 +54,7 @@ content must be markdown or plain prose. experienceReferenced = profile facts yo
 
   constructor(
     ai: AiService,
+    private readonly pdf: PdfService,
     @InjectRepository(Document)
     private readonly documents: Repository<Document>,
   ) {
@@ -91,7 +93,7 @@ ${ctx.job.description}`;
         return this.fail('Cover letter agent returned invalid JSON');
       }
 
-      const doc = await this.documents.save(
+      let doc = await this.documents.save(
         this.documents.create({
           userId: ctx.userId,
           jobId: ctx.job.id,
@@ -110,10 +112,20 @@ ${ctx.job.description}`;
         }),
       );
 
+      const filePath = await this.pdf.renderMarkdownToPdf({
+        userId: ctx.userId,
+        documentId: doc.id,
+        title: doc.title,
+        content: doc.content,
+      });
+      doc.metadata = { ...doc.metadata, filePath };
+      doc = await this.documents.save(doc);
+
       return this.ok('Tailored cover letter generated from your experience', {
         documentId: doc.id,
         title: doc.title,
         content: doc.content,
+        filePath,
         experienceReferenced: parsed.experienceReferenced ?? [],
         omittedGaps: parsed.omittedGaps ?? [],
       });

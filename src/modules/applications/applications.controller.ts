@@ -1,5 +1,13 @@
-import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  StreamableFile,
+} from '@nestjs/common';
 import { ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { createReadStream } from 'fs';
 import { ApplicationStatus } from '../../lib/database/entities';
 import { ApplicationsService } from './applications.service';
 
@@ -24,6 +32,21 @@ export class ApplicationsController {
   @ApiOperation({ summary: 'List generated documents for a user' })
   documents(@Param('userId') userId: string) {
     return this.applicationsService.listDocuments(userId);
+  }
+
+  @Get('documents/:userId/:documentId/pdf')
+  @ApiOperation({ summary: 'Download tailored document as PDF' })
+  async downloadPdf(
+    @Param('userId') userId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<StreamableFile> {
+    const { filePath, title } =
+      await this.applicationsService.getDocumentPdfPath(userId, documentId);
+    const safeName = title.replace(/[^\w.-]+/g, '_').slice(0, 80);
+    return new StreamableFile(createReadStream(filePath), {
+      type: 'application/pdf',
+      disposition: `attachment; filename="${safeName}.pdf"`,
+    });
   }
 
   @Get(':userId/:id')

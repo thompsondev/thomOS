@@ -87,6 +87,43 @@ export class AgentsController {
     return this.orchestrator.runDocumentsPipeline(body.userId, body.jobId);
   }
 
+  @Post('pipeline/browser')
+  @ApiOperation({
+    summary:
+      'Run browser agent (inspect/fill). Approve submit first; set confirmSubmit to click submit.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['userId', 'jobId'],
+      properties: {
+        userId: { type: 'string' },
+        jobId: { type: 'string' },
+        applicationId: { type: 'string' },
+        confirmSubmit: {
+          type: 'boolean',
+          description:
+            'If true and application is approved, click the submit button',
+        },
+      },
+    },
+  })
+  browser(
+    @Body()
+    body: {
+      userId: string;
+      jobId: string;
+      applicationId?: string;
+      confirmSubmit?: boolean;
+    },
+  ) {
+    return this.orchestrator.runAgent(AgentId.BROWSER, body.userId, {
+      jobId: body.jobId,
+      applicationId: body.applicationId,
+      input: { confirmSubmit: body.confirmSubmit },
+    });
+  }
+
   @Post('pipeline/apply')
   @ApiOperation({
     summary:
