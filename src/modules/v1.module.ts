@@ -6,6 +6,7 @@ import { ProfileModule } from './profile/profile.module';
 import { JobsModule } from './jobs/jobs.module';
 import { ApplicationsModule } from './applications/applications.module';
 import { EmailsModule } from './emails/emails.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 
 @Module({
   imports: [
@@ -16,6 +17,8 @@ import { EmailsModule } from './emails/emails.module';
     JobsModule,
     ApplicationsModule,
     EmailsModule,
+    SchedulerModule,
   ],
+  exports: [SchedulerModule],
 })
 export class V1Module {}

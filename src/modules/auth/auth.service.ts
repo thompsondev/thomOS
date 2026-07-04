@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   Logger,
@@ -37,6 +38,13 @@ export class AuthService implements OnModuleInit {
 
   async register(dto: RegisterDto): Promise<AuthResponse> {
     const email = this.normalizeEmail(dto.email);
+    if (!email.includes('@')) {
+      throw new BadRequestException('Valid email is required');
+    }
+    if (!dto.password || dto.password.length < 8) {
+      throw new BadRequestException('Password must be at least 8 characters');
+    }
+
     const existing = await this.users.findOne({ where: { email } });
     if (existing) {
       throw new ConflictException('Email already registered');

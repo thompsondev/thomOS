@@ -1,6 +1,6 @@
 import { Controller, Get, Req } from '@nestjs/common';
 import { Request } from 'express';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { AppService } from './app.service';
 import { Public } from '../middleware/decorators/public.decorator';
 
@@ -13,6 +13,13 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @Public()
+  @Get('health')
+  @ApiOperation({ summary: 'Health check (database + integrations)' })
+  getHealth() {
+    return this.appService.getHealth();
   }
 
   @Public()

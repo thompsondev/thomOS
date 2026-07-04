@@ -545,6 +545,9 @@
           <button class="btn btn-ghost" id="sync-inbox-btn" type="button">
             Sync Gmail
           </button>
+          <button class="btn btn-ghost" id="run-discovery-now-btn" type="button">
+            Run discovery now
+          </button>
           <button class="btn btn-ghost" id="refresh-btn" type="button">
             Refresh
           </button>
@@ -1278,7 +1281,18 @@
           toast(e.message, true);
         }
       });
+      async function runDiscoveryNow() {
+        await runAction('Running scheduled discovery for all profiles…', async () => {
+          await api('/scheduler/discovery/run', {
+            method: 'POST',
+            body: '{}',
+          });
+          toast('Background discovery finished');
+        });
+      }
+
       $('discover-btn').addEventListener('click', discover);
+      $('run-discovery-now-btn').addEventListener('click', runDiscoveryNow);
       $('sync-inbox-btn').addEventListener('click', syncInbox);
       $('ingest-email-btn').addEventListener('click', ingestEmail);
 
