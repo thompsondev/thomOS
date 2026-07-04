@@ -20,6 +20,7 @@ import {
   Profile,
 } from '../../lib/database/entities';
 import { AiService } from '../../lib/ai/ai.service';
+import { CalendarService } from '../../lib/calendar/calendar.service';
 import { GmailService } from '../../lib/email/gmail.service';
 import { OrchestratorService } from '../agents/orchestrator/orchestrator.service';
 
@@ -50,6 +51,7 @@ export class EmailsService {
     private readonly profiles: Repository<Profile>,
     private readonly orchestrator: OrchestratorService,
     private readonly gmail: GmailService,
+    private readonly calendar: CalendarService,
     private readonly ai: AiService,
   ) {}
 
@@ -57,11 +59,13 @@ export class EmailsService {
     return {
       configured: this.gmail.isConfigured(),
       user: this.gmail.getUser() ?? null,
+      calendar: this.calendar.status(),
       capabilities: {
         sendApplication: true,
         syncInbox: true,
         ingestPaste: true,
         webhook: true,
+        calendar: true,
       },
     };
   }
@@ -303,6 +307,117 @@ export class EmailsService {
       subject: draft.subject,
       applicationId: application?.id ?? null,
       attachments: attachments.map((a) => a.filename),
+    };
+  }
+
+  /**
+   * Create a calendar event (ICS always; Google Calendar when configured)
+   * from a classified interview/assessment email.
+   */
+  async scheduleFromEmail(
+    userId: string,
+    emailId: string,
+    options?: { start?: string; durationMinutes?: number },
+  ) {
+    const email = await this.get(userId, emailId);
+    const job = email.jobId
+      ? await this.jobs.findOne({ where: { id: email.jobId, userId } })
+      : null;
+
+    let start =
+      email.interviewAt ?? (options?.start ? new Date(options.start) : null);
+
+    if (!start || Number.isNaN(start.getTime())) {
+      // Default: tomorrow 10:00 local if agent didn't extract a time
+      start = new Date();
+      start.setDate(start.getDate() + 1);
+      start.setHours(10, 0, 0, 0);
+    }
+
+    const durationMinutes = options?.durationMinutes ?? 60;
+    const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
+
+    const title =
+      email.category === 'assessment'
+        ? `Assessment — ${job?.company ?? email.subject ?? 'Role'}`
+        : `Interview — ${job?.company ?? email.subject ?? 'Role'}`;
+
+    const description = [
+      email.summary,
+      email.calendarSuggestion,
+      job ? `Role: ${job.title} @ ${job.company}` : null,
+      email.fromAddress ? `Recruiter: ${email.fromAddress}` : null,
+      email.subject ? `Subject: ${email.subject}` : null,
+      '',
+      email.body.slice(0, 1500),
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const event = await this.calendar.createEvent(userId, {
+      title,
+      description,
+      location: job?.location ?? undefined,
+      start,
+      end,
+      attendeeEmail: email.fromAddress ?? undefined,
+    });
+
+    email.metadata = {
+      ...email.metadata,
+      calendar: {
+        icsPath: event.icsPath,
+        googleEventId: event.googleEventId ?? null,
+        googleHtmlLink: event.googleHtmlLink ?? null,
+        provider: event.provider,
+        scheduledAt: new Date().toISOString(),
+      },
+    };
+    email.requiresApproval = false;
+    await this.emails.save(email);
+
+    if (
+      email.applicationId &&
+      (email.category === 'interview' || email.category === 'assessment')
+    ) {
+      const app = await this.applications.findOne({
+        where: { id: email.applicationId, userId },
+      });
+      if (app && app.status !== ApplicationStatus.INTERVIEW) {
+        app.status = ApplicationStatus.INTERVIEW;
+        app.metadata = {
+          ...app.metadata,
+          interviewAt: start.toISOString(),
+          calendarEventId: event.googleEventId ?? null,
+        };
+        await this.applications.save(app);
+      }
+    }
+
+    return {
+      emailId: email.id,
+      title,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      ...event,
+    };
+  }
+
+  async getCalendarIcs(
+    userId: string,
+    emailId: string,
+  ): Promise<{ filePath: string; title: string }> {
+    const email = await this.get(userId, emailId);
+    const calendar = email.metadata?.calendar as
+      | { icsPath?: string }
+      | undefined;
+    if (!calendar?.icsPath) {
+      const created = await this.scheduleFromEmail(userId, emailId);
+      return { filePath: created.icsPath, title: created.title };
+    }
+    return {
+      filePath: calendar.icsPath,
+      title: email.subject || 'Interview',
     };
   }
 

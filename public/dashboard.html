@@ -877,6 +877,12 @@
         const when = email.interviewAt
           ? `interview ${new Date(email.interviewAt).toLocaleString()}`
           : '';
+        const canSchedule =
+          email.category === 'interview' ||
+          email.category === 'assessment' ||
+          email.interviewAt ||
+          email.calendarSuggestion;
+        const scheduled = email.metadata?.calendar?.googleHtmlLink;
         return `<div class="row">
           <div class="title">${escapeHtml(email.subject || '(no subject)')}</div>
           <div class="meta">
@@ -898,6 +904,19 @@
               ? `<div class="meta" style="margin-top: 4px; color: var(--violet)">Calendar: ${escapeHtml(email.calendarSuggestion)}</div>`
               : ''
           }
+          <div class="row-actions">
+            ${
+              canSchedule
+                ? `<button class="btn btn-teal btn-xs" data-action="calendar" data-email-id="${escapeAttr(email.id)}" type="button">Add to calendar</button>
+                   <button class="btn btn-ghost btn-xs" data-action="ics" data-email-id="${escapeAttr(email.id)}" data-email-title="${escapeAttr(email.subject || 'interview')}" type="button">Download .ics</button>`
+                : ''
+            }
+            ${
+              scheduled
+                ? `<a class="link" href="${escapeAttr(scheduled)}" target="_blank" rel="noopener">Open in Google</a>`
+                : ''
+            }
+          </div>
         </div>`;
       }
 
@@ -1014,6 +1033,44 @@
             `Gmail sync: fetched ${result.fetched}, classified ${result.ingested}`,
           );
         });
+      }
+
+      async function addToCalendar(emailId) {
+        await runAction('Scheduling calendar event…', async () => {
+          const result = await api(`/emails/${emailId}/calendar`, {
+            method: 'POST',
+            body: JSON.stringify({}),
+          });
+          if (result.googleHtmlLink) {
+            toast('Added to Google Calendar');
+            window.open(result.googleHtmlLink, '_blank', 'noopener');
+          } else {
+            toast('Calendar invite created — download .ics to import');
+          }
+        });
+      }
+
+      async function downloadIcs(emailId, title) {
+        try {
+          setBusy('Downloading calendar invite…');
+          const blob = await api(`/emails/${emailId}/calendar.ics`, {
+            blob: true,
+            headers: {},
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${(title || 'interview').replace(/[^\w.-]+/g, '_').slice(0, 50)}.ics`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast('Calendar invite downloaded');
+        } catch (e) {
+          toast(e.message, true);
+        } finally {
+          setBusy(null);
+        }
       }
 
       async function runAction(label, fn) {
@@ -1199,6 +1256,10 @@
         if (action === 'approve' && appId) approveSubmit(appId);
         if (action === 'status' && appId && status) setStatus(appId, status);
         if (action === 'pdf' && docId) downloadPdf(docId, docTitle);
+        if (action === 'calendar' && btn.dataset.emailId)
+          addToCalendar(btn.dataset.emailId);
+        if (action === 'ics' && btn.dataset.emailId)
+          downloadIcs(btn.dataset.emailId, btn.dataset.emailTitle);
       });
 
       $('login-btn').addEventListener('click', login);

@@ -5,10 +5,12 @@ import {
   Headers,
   Param,
   Post,
+  StreamableFile,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiBearerAuth, ApiBody, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { readFile } from 'fs/promises';
 import {
   CurrentUser,
   type AuthUser,
@@ -125,6 +127,49 @@ export class EmailsController {
   })
   syncInbox(@CurrentUser() user: AuthUser, @Body() body: { limit?: number }) {
     return this.emailsService.syncInbox(user.userId, body.limit ?? 10);
+  }
+
+  @Post(':id/calendar')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({
+    summary:
+      'Schedule interview/assessment on calendar (ICS always; Google Calendar when configured)',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        start: { type: 'string', description: 'ISO datetime override' },
+        durationMinutes: { type: 'number' },
+      },
+    },
+  })
+  scheduleCalendar(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+    @Body() body: { start?: string; durationMinutes?: number },
+  ) {
+    return this.emailsService.scheduleFromEmail(user.userId, id, body);
+  }
+
+  @Get(':id/calendar.ics')
+  @ApiBearerAuth('Authorization')
+  @ApiOperation({ summary: 'Download .ics invite for a classified email' })
+  async downloadIcs(
+    @CurrentUser() user: AuthUser,
+    @Param('id') id: string,
+  ): Promise<StreamableFile> {
+    const { filePath, title } = await this.emailsService.getCalendarIcs(
+      user.userId,
+      id,
+    );
+    const buffer = await readFile(filePath);
+    const safeName = title.replace(/[^\w.-]+/g, '_').slice(0, 60);
+    return new StreamableFile(buffer, {
+      type: 'text/calendar',
+      disposition: `attachment; filename="${safeName}.ics"`,
+      length: buffer.length,
+    });
   }
 
   @Get(':id')
