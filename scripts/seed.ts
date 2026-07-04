@@ -87,6 +87,7 @@ async function main() {
       summary: dto.summary ?? null,
       phone: dto.phone ?? null,
       linkedinUrl: dto.linkedinUrl ?? null,
+      githubUrl: dto.githubUrl ?? null,
       masterResume: dto.masterResume ?? '',
       skills: dto.skills ?? [],
       filters: dto.filters ?? {},
@@ -98,6 +99,7 @@ async function main() {
     profile.summary = dto.summary ?? profile.summary;
     profile.phone = dto.phone ?? profile.phone;
     profile.linkedinUrl = dto.linkedinUrl ?? profile.linkedinUrl;
+    profile.githubUrl = dto.githubUrl ?? profile.githubUrl;
     profile.masterResume = dto.masterResume ?? profile.masterResume;
     profile.skills = dto.skills ?? profile.skills;
     profile.filters = dto.filters ?? profile.filters;

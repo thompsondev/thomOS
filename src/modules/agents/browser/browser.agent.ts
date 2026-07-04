@@ -43,7 +43,7 @@ Return ONLY valid JSON:
   "notes": string
 }
 fieldValues keys MUST be CSS selectors from the provided field list.
-Prefer board-native fields (first name, last name, email, phone, LinkedIn).`;
+Prefer board-native fields (first name, last name, email, phone, LinkedIn, GitHub).`;
 
   constructor(
     ai: AiService,
@@ -118,6 +118,7 @@ Headline: ${ctx.profile?.headline ?? ''}
 Email/userId: ${ctx.userId}
 Phone: ${ctx.profile?.phone ?? ''}
 LinkedIn: ${ctx.profile?.linkedinUrl ?? ''}
+GitHub: ${ctx.profile?.githubUrl ?? ''}
 Location filters: ${JSON.stringify(ctx.profile?.filters?.locations ?? [])}
 Skills: ${(ctx.profile?.skills ?? []).slice(0, 20).join(', ')}
 
@@ -189,6 +190,7 @@ Confirm submit requested: ${confirmSubmit}`;
           email: ctx.userId,
           location: ctx.profile?.filters?.locations?.[0] ?? null,
           linkedin: ctx.profile?.linkedinUrl ?? null,
+          github: ctx.profile?.githubUrl ?? null,
           phone: ctx.profile?.phone ?? null,
         },
         confirmSubmit,

@@ -1,0 +1,107 @@
+﻿[
+    {
+        "Area":  "Health",
+        "Status":  "PASS",
+        "Detail":  "{\"status\":\"ok\",\"service\":\"thomOS\",\"timestamp\":\"2026-07-04T12:51:14.290Z\",\"checks\":{\"database\":\"up\",\"claude\":\"configured\",\"gmail\":\"missing\",\"calendar\":\"configured\",\"jwt\":\"weak-secret\",\"scheduler\":\"enabled\"},\"scheduler\":{\"enabled\":true,\"discoveryCron\":\"0 */6 * * *\",\"inboxCron\":\"15 */2 * * *\",\"discoveryRunning\":false,\"inboxRunning\":false,\"gmailConfigured\":false}}"
+    },
+    {
+        "Area":  "Root",
+        "Status":  "PASS",
+        "Detail":  "thomOS API"
+    },
+    {
+        "Area":  "Dashboard static",
+        "Status":  "PASS",
+        "Detail":  ""
+    },
+    {
+        "Area":  "Auth gate",
+        "Status":  "PASS",
+        "Detail":  "blocked unauthenticated"
+    },
+    {
+        "Area":  "Login",
+        "Status":  "PASS",
+        "Detail":  "topeyemi33@gmail.com"
+    },
+    {
+        "Area":  "Auth me",
+        "Status":  "PASS",
+        "Detail":  "topeyemi33@gmail.com"
+    },
+    {
+        "Area":  "Profile",
+        "Status":  "PASS",
+        "Detail":  "skills=43 exp=7"
+    },
+    {
+        "Area":  "Agents list",
+        "Status":  "PASS",
+        "Detail":  "count=9"
+    },
+    {
+        "Area":  "Scheduler",
+        "Status":  "PASS",
+        "Detail":  "{\"enabled\":true,\"discoveryCron\":\"0 */6 * * *\",\"inboxCron\":\"15 */2 * * *\",\"discoveryRunning\":false,\"inboxRunning\":false,\"gmailConfigured\":false}"
+    },
+    {
+        "Area":  "Email/Gmail status",
+        "Status":  "PASS",
+        "Detail":  "gmail=False calendar=True"
+    },
+    {
+        "Area":  "Create job",
+        "Status":  "PASS",
+        "Detail":  "dfd8e05e-ce0a-4eb3-aad9-024140aa6df7"
+    },
+    {
+        "Area":  "Documents pipeline",
+        "Status":  "PASS",
+        "Detail":  "resumePdf=True"
+    },
+    {
+        "Area":  "PDF download",
+        "Status":  "FAIL",
+        "Detail":  "Object reference not set to an instance of an object."
+    },
+    {
+        "Area":  "Matching",
+        "Status":  "FAIL",
+        "Detail":  "The underlying connection was closed: An unexpected error occurred on a receive."
+    },
+    {
+        "Area":  "Email ingest",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Chat Claude",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Insights",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Live discovery",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Dashboard data",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Gmail send ready",
+        "Status":  "FAIL",
+        "Detail":  "Unable to connect to the remote server"
+    },
+    {
+        "Area":  "Chat SSE stream",
+        "Status":  "FAIL",
+        "Detail":  ""
+    }
+]

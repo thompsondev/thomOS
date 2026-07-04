@@ -42,6 +42,10 @@ export class ProfileController {
           type: 'string',
           example: 'https://linkedin.com/in/your-handle',
         },
+        githubUrl: {
+          type: 'string',
+          example: 'https://github.com/your-handle',
+        },
         masterResume: { type: 'string' },
         skills: { type: 'array', items: { type: 'string' } },
         filters: { type: 'object' },

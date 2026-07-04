@@ -5,8 +5,9 @@ export type UpsertProfileDto = {
   fullName?: string;
   headline?: string;
   summary?: string;
-  phone?: string;
-  linkedinUrl?: string;
+  phone?: string | null;
+  linkedinUrl?: string | null;
+  githubUrl?: string | null;
   masterResume?: string;
   skills?: string[];
   filters?: ProfileFilters;

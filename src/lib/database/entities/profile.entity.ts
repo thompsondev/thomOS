@@ -42,6 +42,9 @@ export class Profile {
   @Column({ type: 'text', nullable: true })
   linkedinUrl: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  githubUrl: string | null;
+
   /** Master resume in markdown/plain text — source of truth for all tailored docs */
   @Column({ type: 'text', default: '' })
   masterResume: string;

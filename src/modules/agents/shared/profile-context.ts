@@ -33,6 +33,7 @@ export function buildExperienceSourceBlock(profile: Profile): string {
 - Headline: ${profile.headline ?? 'not provided'}
 - Phone: ${profile.phone?.trim() || 'not provided'}
 - LinkedIn: ${profile.linkedinUrl?.trim() || 'not provided'}
+- GitHub: ${profile.githubUrl?.trim() || 'not provided'}
 - Skills on file: ${(profile.skills ?? []).join(', ') || 'none listed'}
 
 MASTER RESUME (source of truth — only use facts present here):

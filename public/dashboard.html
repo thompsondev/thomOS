@@ -1069,7 +1069,7 @@
           : '<div class="empty">No emails classified yet.</div>';
 
         $('user-line').textContent = me.email;
-        const contact = [profile.phone, profile.linkedinUrl]
+        const contact = [profile.phone, profile.linkedinUrl, profile.githubUrl]
           .filter(Boolean)
           .join(' · ');
         $('profile-chip').textContent = contact

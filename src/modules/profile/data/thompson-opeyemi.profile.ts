@@ -5,7 +5,7 @@ export const THOMPSON_USER_ID = 'topeyemi33@gmail.com';
 
 const MASTER_RESUME = `THOMPSON OPEYEMI ODUNAYO
 Lagos, Nigeria | +234 805 198 6863
-Topeyemi33@gmail.com | LinkedIn | GitHub
+Topeyemi33@gmail.com | https://linkedin.com/in/opeyemi-thompson | https://github.com/thompsondev
 
 Summary
 Software engineer with 6+ years of experience building scalable fintech and SaaS platforms using React.js/Next.js/Vue.js, NestJS, TypeORM, PostgreSQL, AI tools. I develop responsive, high-performance interfaces and robust backend services, design efficient APIs, and deliver features that scale reliably. I work well across teams and enjoy using modern tools and best practices to create smooth, impactful user experiences from end to end.
@@ -92,7 +92,8 @@ export const thompsonOpeyemiProfile: UpsertProfileDto = {
   fullName: 'Thompson Opeyemi Odunayo',
   headline: 'Senior Frontend Engineer | AI & Automation Engineer',
   phone: '+234 805 198 6863',
-  linkedinUrl: null,
+  linkedinUrl: 'https://linkedin.com/in/opeyemi-thompson',
+  githubUrl: 'https://github.com/thompsondev',
   summary:
     'Software engineer with 6+ years of experience building scalable fintech and SaaS platforms using React.js/Next.js/Vue.js, NestJS, TypeORM, PostgreSQL, and AI tools. Develops responsive, high-performance interfaces and robust backend services, designs efficient APIs, and delivers features that scale reliably.',
   masterResume: MASTER_RESUME,

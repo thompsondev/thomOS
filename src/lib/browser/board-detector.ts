@@ -81,6 +81,7 @@ export const PROFILE_FIELD_PATTERNS: Array<{
     | 'email'
     | 'phone'
     | 'linkedin'
+    | 'github'
     | 'location';
   patterns: RegExp[];
 }> = [
@@ -107,6 +108,10 @@ export const PROFILE_FIELD_PATTERNS: Array<{
   {
     key: 'linkedin',
     patterns: [/linkedin/i],
+  },
+  {
+    key: 'github',
+    patterns: [/github/i, /git\s*hub/i, /portfolio/i],
   },
   {
     key: 'location',

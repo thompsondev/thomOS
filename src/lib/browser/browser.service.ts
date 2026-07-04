@@ -30,6 +30,7 @@ export type ApplicantProfile = {
   email?: string | null;
   phone?: string | null;
   linkedin?: string | null;
+  github?: string | null;
   location?: string | null;
 };
 
@@ -290,6 +291,7 @@ export class BrowserService implements OnModuleDestroy {
       email: profile.email || '',
       phone: profile.phone || '',
       linkedin: profile.linkedin || '',
+      github: profile.github || '',
       location: profile.location || '',
     };
 
